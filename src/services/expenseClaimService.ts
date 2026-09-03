@@ -566,6 +566,40 @@ export async function submitExpenseClaim(
   return claim;
 }
 
+export async function returnExpenseClaim(
+  claimId: number,
+  reviewedBy: number
+): Promise<ExpenseClaim> {
+  const claim =
+    expenseClaims.find(
+      claim => claim.id === claimId
+    );
+
+  if (!claim) {
+    throw new Error(
+      "Rendición no encontrada"
+    );
+  }
+
+  if (
+    claim.status !== ExpenseClaimStatus.Submitted
+  ) {
+    throw new Error(
+      "Solo se pueden devolver rendiciones enviadas"
+    );
+  }
+
+  claim.status =
+    ExpenseClaimStatus.Returned;
+
+  claim.reviewedBy =
+    reviewedBy;
+
+  claim.reviewedAt =
+    new Date().toISOString();
+
+  return claim;
+}
 
 /*
  * Revisa una rendición.

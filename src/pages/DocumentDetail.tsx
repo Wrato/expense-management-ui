@@ -30,31 +30,22 @@ import {
   getDocumentStatusColor
 } from "../utils/documentStatusUtils";
 
-
 export default function DocumentDetail() {
-
   const { id } = useParams();
 
   const navigate = useNavigate();
 
   const location = useLocation();
 
-
   const [document, setDocument] =
     useState<ExpenseDocument | null>(null);
 
-
   useEffect(() => {
-
     async function loadDocument() {
-
-      const documentId =
-        Number(id);
-
+      const documentId = Number(id);
 
       const response =
         await getDocuments();
-
 
       const selectedDocument =
         response.find(
@@ -62,28 +53,21 @@ export default function DocumentDetail() {
             document.id === documentId
         );
 
-
       setDocument(
         selectedDocument ?? null
       );
     }
 
-
     loadDocument();
-
   }, [id]);
 
-
   if (!document) {
-
     return (
       <Typography>
         Documento no encontrado
       </Typography>
     );
-
   }
-
 
   const issuerCompany =
     issuerCompanies.find(
@@ -92,7 +76,6 @@ export default function DocumentDetail() {
         document.issuerCompanyId
     );
 
-
   const project =
     projects.find(
       project =>
@@ -100,42 +83,26 @@ export default function DocumentDetail() {
         document.projectId
     );
 
-
-  /*
-   * Los documentos PENDING y REJECTED
-   * pueden ser corregidos.
-   *
-   * Los APPROVED quedan bloqueados.
-   */
   const canEdit =
     document.status ===
       DocumentStatus.Pending ||
     document.status ===
       DocumentStatus.Rejected;
 
-
   const handleBack = () => {
-
     const returnTo =
       location.state?.returnTo;
 
-
     if (returnTo) {
-
       navigate(returnTo);
-
       return;
     }
 
-
     navigate("/documents");
-
   };
-
 
   return (
     <>
-
       <Box
         sx={{
           display: "flex",
@@ -144,7 +111,6 @@ export default function DocumentDetail() {
           mb: 3
         }}
       >
-
         <Box
           sx={{
             display: "flex",
@@ -152,7 +118,6 @@ export default function DocumentDetail() {
             gap: 1
           }}
         >
-
           <IconButton
             onClick={handleBack}
             aria-label="Volver a documentos"
@@ -164,14 +129,11 @@ export default function DocumentDetail() {
             <ArrowBackIcon />
           </IconButton>
 
-
           <Typography variant="h4">
             Documento #{document.id}
           </Typography>
 
-
           {canEdit && (
-
             <Button
               variant="outlined"
               onClick={() =>
@@ -188,110 +150,24 @@ export default function DocumentDetail() {
             >
               Editar
             </Button>
-
           )}
-
         </Box>
 
-
         <Chip
-          label={
-            getDocumentStatusLabel(
-              document.status
-            )
-          }
-          color={
-            getDocumentStatusColor(
-              document.status
-            )
-          }
+          label={getDocumentStatusLabel(
+            document.status
+          )}
+          color={getDocumentStatusColor(
+            document.status
+          )}
         />
-
       </Box>
-
-
-      {document.status ===
-        DocumentStatus.Rejected && (
-
-        <Paper
-          sx={{
-            p: 2,
-            mb: 3
-          }}
-        >
-
-          <Typography
-            variant="body2"
-            color="error"
-          >
-            Este documento fue rechazado durante
-            la revisión de una rendición. Puedes
-            corregirlo y, al guardarlo, volverá a
-            quedar pendiente para ser incluido en
-            una nueva rendición.
-          </Typography>
-
-        </Paper>
-
-      )}
-
-
-      {document.status ===
-        DocumentStatus.Pending && (
-
-        <Paper
-          sx={{
-            p: 2,
-            mb: 3
-          }}
-        >
-
-          <Typography
-            variant="body2"
-            color="text.secondary"
-          >
-            Este documento está pendiente y puede
-            ser incluido directamente en una
-            rendición. Los documentos se revisan
-            como parte de la rendición enviada.
-          </Typography>
-
-        </Paper>
-
-      )}
-
-
-      {document.status ===
-        DocumentStatus.Approved && (
-
-        <Paper
-          sx={{
-            p: 2,
-            mb: 3
-          }}
-        >
-
-          <Typography
-            variant="body2"
-            color="text.secondary"
-          >
-            Este documento fue aprobado como parte
-            de una rendición y ya no puede ser
-            modificado ni utilizado en otra
-            rendición.
-          </Typography>
-
-        </Paper>
-
-      )}
-
 
       <Paper
         sx={{
           p: 3
         }}
       >
-
         <Typography
           variant="h6"
           sx={{
@@ -300,7 +176,6 @@ export default function DocumentDetail() {
         >
           Información del documento
         </Typography>
-
 
         <Box
           sx={{
@@ -312,9 +187,7 @@ export default function DocumentDetail() {
             gap: 3
           }}
         >
-
           <Box>
-
             <Typography
               variant="body2"
               color="text.secondary"
@@ -322,16 +195,12 @@ export default function DocumentDetail() {
               Número de documento
             </Typography>
 
-
             <Typography>
               {document.documentNumber ?? "-"}
             </Typography>
-
           </Box>
 
-
           <Box>
-
             <Typography
               variant="body2"
               color="text.secondary"
@@ -339,16 +208,12 @@ export default function DocumentDetail() {
               Fecha de emisión
             </Typography>
 
-
             <Typography>
               {document.issueDate ?? "-"}
             </Typography>
-
           </Box>
 
-
           <Box>
-
             <Typography
               variant="body2"
               color="text.secondary"
@@ -356,21 +221,16 @@ export default function DocumentDetail() {
               Fecha de envío
             </Typography>
 
-
             <Typography>
               {document.sentAt
                 ? new Date(
                     document.sentAt
                   ).toLocaleString("es-CL")
-                : "-"
-              }
+                : "-"}
             </Typography>
-
           </Box>
 
-
           <Box>
-
             <Typography
               variant="body2"
               color="text.secondary"
@@ -378,18 +238,14 @@ export default function DocumentDetail() {
               Total
             </Typography>
 
-
             <Typography>
               $
               {(document.total ?? 0)
                 .toLocaleString("es-CL")}
             </Typography>
-
           </Box>
 
-
           <Box>
-
             <Typography
               variant="body2"
               color="text.secondary"
@@ -397,16 +253,12 @@ export default function DocumentDetail() {
               Teléfono de origen
             </Typography>
 
-
             <Typography>
               {document.sourcePhone}
             </Typography>
-
           </Box>
 
-
           <Box>
-
             <Typography
               variant="body2"
               color="text.secondary"
@@ -414,17 +266,13 @@ export default function DocumentDetail() {
               Empresa emisora
             </Typography>
 
-
             <Typography>
               {issuerCompany?.name ??
                 "Sin asignar"}
             </Typography>
-
           </Box>
 
-
           <Box>
-
             <Typography
               variant="body2"
               color="text.secondary"
@@ -432,17 +280,13 @@ export default function DocumentDetail() {
               RUT empresa emisora
             </Typography>
 
-
             <Typography>
               {document.issuerCompanyRut ??
                 "Sin registrar"}
             </Typography>
-
           </Box>
 
-
           <Box>
-
             <Typography
               variant="body2"
               color="text.secondary"
@@ -450,17 +294,13 @@ export default function DocumentDetail() {
               Proyecto
             </Typography>
 
-
             <Typography>
               {project?.name ??
                 "Sin proyecto"}
             </Typography>
-
           </Box>
 
-
           <Box>
-
             <Typography
               variant="body2"
               color="text.secondary"
@@ -468,30 +308,21 @@ export default function DocumentDetail() {
               Estado
             </Typography>
 
-
             <Chip
-              label={
-                getDocumentStatusLabel(
-                  document.status
-                )
-              }
-              color={
-                getDocumentStatusColor(
-                  document.status
-                )
-              }
+              label={getDocumentStatusLabel(
+                document.status
+              )}
+              color={getDocumentStatusColor(
+                document.status
+              )}
               size="small"
               sx={{
                 mt: 0.5
               }}
             />
-
           </Box>
-
         </Box>
-
       </Paper>
-
     </>
   );
 }
