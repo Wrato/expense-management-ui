@@ -7,8 +7,12 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Button
+  IconButton,
+  Tooltip
 } from "@mui/material";
+
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import EditIcon from "@mui/icons-material/Edit";
 
 import { useNavigate } from "react-router-dom";
 
@@ -40,21 +44,27 @@ export default function DocumentTable({
     <TableContainer
       component={Paper}
       sx={{
-        borderRadius: 2
+        borderRadius: 2,
+        width: "100%",
+        overflowX: "auto"
       }}
     >
-      <Table>
+      <Table
+        sx={{
+          width: "100%"
+        }}
+      >
         <TableHead>
           <TableRow>
-            <TableCell sx={{ fontWeight: "bold" }}>
+            <TableCell sx={{ fontWeight: "bold", width: 70 }}>
               ID
             </TableCell>
 
-            <TableCell sx={{ fontWeight: "bold" }}>
+            <TableCell sx={{ fontWeight: "bold", width: 120 }}>
               Fecha emisión
             </TableCell>
 
-            <TableCell sx={{ fontWeight: "bold" }}>
+            <TableCell sx={{ fontWeight: "bold", width: 120 }}>
               N° documento
             </TableCell>
 
@@ -182,23 +192,39 @@ export default function DocumentTable({
                   {expenseClaim?.title ?? "-"}
                 </TableCell>
 
-                <TableCell>
-                  {canEdit ? (
-                    <Button
+                <TableCell align="center">
+                  <Tooltip title="Ver detalle">
+                    <IconButton
                       size="small"
-                      variant="outlined"
+                      aria-label="Ver detalle"
                       onClick={event => {
                         event.stopPropagation();
 
                         navigate(
-                          `/documents/${document.id}/edit`
+                          `/documents/${document.id}`
                         );
                       }}
                     >
-                      Editar
-                    </Button>
-                  ) : (
-                    "Bloqueado"
+                      <VisibilityIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+
+                  {canEdit && (
+                    <Tooltip title="Editar">
+                      <IconButton
+                        size="small"
+                        aria-label="Editar"
+                        onClick={event => {
+                          event.stopPropagation();
+
+                          navigate(
+                            `/documents/${document.id}/edit`
+                          );
+                        }}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   )}
                 </TableCell>
               </TableRow>

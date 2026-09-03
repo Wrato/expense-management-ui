@@ -8,6 +8,7 @@ import ExpenseDetail from "./pages/ExpenseDetail";
 import ExpenseEdit from "./pages/ExpenseEdit";
 import ExpenseReview from "./pages/ExpenseReview";
 import Documents from "./pages/Documents";
+import DocumentForm from "./pages/DocumentForm";
 import DocumentDetail from "./pages/DocumentDetail";
 import DocumentEdit from "./pages/DocumentEdit";
 import IssuerCompanies from "./pages/IssuerCompanies";
@@ -92,7 +93,9 @@ function App() {
           path="/expenses/:id/review"
           element={
             <ProtectedRoute>
-              <ExpenseReview />
+              <Layout>
+                <ExpenseReview />
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -103,6 +106,17 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <Documents />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/documents/new"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <DocumentForm />
               </Layout>
             </ProtectedRoute>
           }

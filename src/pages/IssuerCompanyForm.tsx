@@ -20,7 +20,7 @@ import {
   useParams
 } from "react-router-dom";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { issuerCompanies } from "../mocks/issuerCompanies";
 import { categories } from "../mocks/categories";
@@ -32,38 +32,28 @@ export default function IssuerCompanyForm() {
   const isEdit =
     id !== undefined;
 
-  const [rut, setRut] =
-    useState("");
+  const company = isEdit
+    ? issuerCompanies.find(
+        company => company.id === Number(id)
+        )
+    : undefined;
+    
+  const [rut, setRut] = useState(
+    company?.rut ?? ""
+    );
 
-  const [name, setName] =
-    useState("");
+    const [name, setName] = useState(
+    company?.name ?? ""
+    );
 
-  const [categoryId, setCategoryId] =
-    useState<number | "">("");
+    const [categoryId, setCategoryId] =
+    useState<number | "">(
+        company?.categoryId ?? ""
+    );
 
-  const [active, setActive] =
-    useState(true);
-
-  useEffect(() => {
-    if (!isEdit) {
-      return;
-    }
-
-    const company =
-      issuerCompanies.find(
-        company =>
-          company.id === Number(id)
-      );
-
-    if (!company) {
-      return;
-    }
-
-    setRut(company.rut);
-    setName(company.name);
-    setCategoryId(company.categoryId);
-    setActive(company.active);
-  }, [id, isEdit]);
+    const [active, setActive] = useState(
+    company?.active ?? true
+    );
 
   const handleSave = () => {
     if (

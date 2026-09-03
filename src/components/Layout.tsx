@@ -18,8 +18,10 @@ export default function Layout({ children }: Props) {
         component="main"
         sx={{
           flexGrow: 1,
+          minWidth: 0,
           p: 3,
-          mt: 8
+          mt: 8,
+          boxSizing: "border-box",
         }}
       >
         {children}
