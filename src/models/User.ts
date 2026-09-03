@@ -7,4 +7,5 @@ export interface User {
   name: string;
   role: UserRole;
   companyId: number | null;
+  phone: string | null;
 }

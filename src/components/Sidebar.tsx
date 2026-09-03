@@ -12,6 +12,7 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import BusinessIcon from "@mui/icons-material/Business";
 import CategoryIcon from "@mui/icons-material/Category";
 import AssignmentIcon from "@mui/icons-material/Assignment";
+import PeopleIcon from "@mui/icons-material/People";
 
 import { NavLink } from "react-router-dom";
 
@@ -28,7 +29,8 @@ const menuItems = [
   { text: "Rendiciones", icon: <AssignmentIcon />, path: "/expenses", 
       roles: [ UserRole.Admin, UserRole.Accountant, UserRole.Employee ]  },
   { text: "Empresas", icon: <BusinessIcon />, path: "/issuer-companies", roles: [ UserRole.Admin ] },
-  { text: "Categorías", icon: <CategoryIcon />, path: "/categories", roles: [ UserRole.Admin ] }
+  { text: "Categorías", icon: <CategoryIcon />, path: "/categories", roles: [ UserRole.Admin ] },
+  { text: "Usuarios", icon: <PeopleIcon />, path: "/users", roles: [UserRole.Admin] }
 ];
 
 export default function Sidebar() {

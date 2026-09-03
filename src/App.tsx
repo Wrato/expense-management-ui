@@ -11,7 +11,11 @@ import Documents from "./pages/Documents";
 import DocumentDetail from "./pages/DocumentDetail";
 import DocumentEdit from "./pages/DocumentEdit";
 import IssuerCompanies from "./pages/IssuerCompanies";
+import IssuerCompanyForm from "./pages/IssuerCompanyForm";
 import Categories from "./pages/Categories";
+import CategoryForm from "./pages/CategoryForm";
+import Users from "./pages/Users";
+import UserForm from "./pages/UserForm";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleRoute from "./routes/RoleRoute";
@@ -63,6 +67,37 @@ function App() {
         />
 
         <Route
+          path="/expenses/:id"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <ExpenseDetail />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/expenses/:id/edit"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <ExpenseEdit />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/expenses/:id/review"
+          element={
+            <ProtectedRoute>
+              <ExpenseReview />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/documents"
           element={
             <ProtectedRoute>
@@ -106,6 +141,32 @@ function App() {
           }
         />
 
+        <Route 
+          path="/issuer-companies/new" 
+          element={ 
+            <ProtectedRoute> 
+              <RoleRoute allowedRoles={[UserRole.Admin]}> 
+                <Layout> 
+                  <IssuerCompanyForm /> 
+                </Layout> 
+              </RoleRoute> 
+            </ProtectedRoute> 
+          } 
+        />
+
+        <Route 
+          path="/issuer-companies/:id/edit" 
+          element={ 
+            <ProtectedRoute> 
+              <RoleRoute allowedRoles={[UserRole.Admin]}> 
+                <Layout> 
+                  <IssuerCompanyForm /> 
+                </Layout> 
+              </RoleRoute> 
+            </ProtectedRoute> 
+          } 
+        />
+
         <Route
           path="/categories"
           element={
@@ -117,35 +178,69 @@ function App() {
           }
         />
 
-        <Route
-          path="/expenses/:id"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <ExpenseDetail />
-              </Layout>
-            </ProtectedRoute>
-          }
+        <Route 
+          path="/categories/new" 
+          element={ 
+            <ProtectedRoute> 
+              <RoleRoute allowedRoles={[UserRole.Admin]}> 
+                <Layout> 
+                  <CategoryForm /> 
+                </Layout> 
+              </RoleRoute> 
+            </ProtectedRoute> 
+          } 
         />
 
-        <Route
-          path="/expenses/:id/edit"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <ExpenseEdit />
-              </Layout>
-            </ProtectedRoute>
-          }
+        <Route 
+          path="/categories/:id/edit" 
+          element={ 
+            <ProtectedRoute> 
+              <RoleRoute allowedRoles={[UserRole.Admin]}> 
+                <Layout> 
+                  <CategoryForm /> 
+                </Layout> 
+              </RoleRoute> 
+            </ProtectedRoute> 
+          } 
         />
 
-        <Route
-          path="/expenses/:id/review"
-          element={
-            <ProtectedRoute>
-              <ExpenseReview />
-            </ProtectedRoute>
-          }
+        <Route 
+          path="/users" 
+          element={ 
+            <ProtectedRoute> 
+              <RoleRoute allowedRoles={[UserRole.Admin]}> 
+                <Layout> 
+                  <Users /> 
+                </Layout> 
+              </RoleRoute> 
+            </ProtectedRoute> 
+          } 
+        />
+
+        <Route 
+          path="/users/new" 
+          element={ 
+            <ProtectedRoute> 
+              <RoleRoute allowedRoles={[UserRole.Admin]}> 
+                <Layout> 
+                  <UserForm /> 
+                </Layout> 
+              </RoleRoute> 
+            </ProtectedRoute> 
+          } 
+        />
+
+        <Route 
+          path="/users/:id/edit" 
+          element={ 
+            <ProtectedRoute> 
+              <RoleRoute allowedRoles={[UserRole.Admin]}> 
+                <Layout> 
+                  <UserForm /> 
+                </Layout> 
+              </RoleRoute> 
+            </ProtectedRoute> 
+          } 
         />
 
       </Routes>
