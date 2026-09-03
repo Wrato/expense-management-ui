@@ -1,10 +1,15 @@
 import {
   Box,
+  Button,
+  TablePagination,
   Typography,
   TextField
 } from "@mui/material";
 
+import AddIcon from "@mui/icons-material/Add";
+
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { getDocuments } from "../services/expenseDocumentService";
 import DocumentTable from "../components/ExpenseDocumentTable";
@@ -25,6 +30,7 @@ import {
 
 export default function Documents() {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const isEmployee =
     user?.role === UserRole.Employee;
@@ -34,6 +40,9 @@ export default function Documents() {
 
   const [search, setSearch] =
     useState("");
+
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
 
   useEffect(() => {
     async function loadDocuments() {
@@ -154,6 +163,15 @@ export default function Documents() {
       });
     }, [documents, search]);
 
+  const paginatedDocuments = useMemo(() => {
+    const start = page * rowsPerPage;
+
+    return filteredDocuments.slice(
+      start,
+      start + rowsPerPage
+    );
+  }, [filteredDocuments, page, rowsPerPage]);
+
   return (
     <>
       <Box
@@ -169,6 +187,16 @@ export default function Documents() {
             ? "Mis Documentos"
             : "Documentos"}
         </Typography>
+
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() =>
+            navigate("/documents/new")
+          }
+        >
+          Agregar documento
+        </Button>
       </Box>
 
       <TextField
@@ -176,17 +204,39 @@ export default function Documents() {
         size="small"
         fullWidth
         value={search}
-        onChange={event =>
-          setSearch(event.target.value)
-        }
+        onChange={event => {
+          setSearch(event.target.value);
+          setPage(0);
+        }}
         sx={{
           mb: 3
         }}
       />
 
       <DocumentTable
-        documents={filteredDocuments}
+        documents={paginatedDocuments}
         showEmployee={!isEmployee}
+      />
+
+      <TablePagination
+        component="div"
+        count={filteredDocuments.length}
+        page={page}
+        onPageChange={(_, newPage) => {
+          setPage(newPage);
+        }}
+        rowsPerPage={rowsPerPage}
+        onRowsPerPageChange={event => {
+          setRowsPerPage(
+            Number(event.target.value)
+          );
+          setPage(0);
+        }}
+        rowsPerPageOptions={[5, 10, 25]}
+        labelRowsPerPage="Documentos por página"
+        labelDisplayedRows={({ from, to, count }) =>
+          `${from}-${to} de ${count}`
+        }
       />
     </>
   );

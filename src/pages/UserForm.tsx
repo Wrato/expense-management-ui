@@ -18,10 +18,7 @@ import {
   useParams
 } from "react-router-dom";
 
-import {
-  useEffect,
-  useState
-} from "react";
+import { useState } from "react";
 
 import { users } from "../mocks/users";
 import { issuerCompanies } from "../mocks/issuerCompanies";
@@ -33,27 +30,33 @@ export default function UserForm() {
 
   const isEdit = id !== undefined;
 
-  const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
-  const [role, setRole] = useState<UserRole | "">("");
-  const [companyId, setCompanyId] = useState<number | "">("");
-  const [phone, setPhone] = useState("");
+  const existingUser = isEdit
+    ? users.find(
+        user => user.id === Number(id)
+        )
+    : undefined;
 
-  useEffect(() => {
-    if (!isEdit) return;
-
-    const user = users.find(
-      user => user.id === Number(id)
+  const [name, setName] = useState(
+    existingUser?.name ?? ""
     );
 
-    if (!user) return;
+    const [username, setUsername] = useState(
+    existingUser?.username ?? ""
+    );
 
-    setName(user.name);
-    setUsername(user.username);
-    setRole(user.role);
-    setCompanyId(user.companyId ?? "");
-    setPhone(user.phone ?? "");
-  }, [id, isEdit]);
+    const [role, setRole] =
+    useState<UserRole | "">(
+        existingUser?.role ?? ""
+    );
+
+    const [companyId, setCompanyId] =
+    useState<number | "">(
+        existingUser?.companyId ?? ""
+    );
+
+    const [phone, setPhone] = useState(
+    existingUser?.phone ?? ""
+    );
 
   const handleSave = () => {
     if (
@@ -111,24 +114,6 @@ export default function UserForm() {
     }
 
     navigate("/users");
-  };
-
-  const getRoleLabel = (
-    role: UserRole
-  ): string => {
-    switch (role) {
-      case UserRole.Admin:
-        return "Administrador";
-
-      case UserRole.Accountant:
-        return "Contador";
-
-      case UserRole.Employee:
-        return "Trabajador";
-
-      default:
-        return role;
-    }
   };
 
   return (
@@ -238,14 +223,8 @@ export default function UserForm() {
               value={companyId}
               label="Empresa"
               onChange={event =>
-                setCompanyId(
-                  event.target.value === ""
-                    ? ""
-                    : Number(
-                        event.target.value
-                      )
-                )
-              }
+                setCompanyId(Number(event.target.value))
+                }
             >
               <MenuItem value="">
                 Sin empresa

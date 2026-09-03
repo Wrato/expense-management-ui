@@ -14,10 +14,7 @@ import {
   useParams
 } from "react-router-dom";
 
-import {
-  useEffect,
-  useState
-} from "react";
+import { useState } from "react";
 
 import { categories } from "../mocks/categories";
 
@@ -28,26 +25,15 @@ export default function CategoryForm() {
   const isEdit =
     id !== undefined;
 
-  const [name, setName] =
-    useState("");
+  const category = isEdit
+  ? categories.find(
+      category => category.id === Number(id)
+    )
+  : undefined;
 
-  useEffect(() => {
-    if (!isEdit) {
-      return;
-    }
-
-    const category =
-      categories.find(
-        category =>
-          category.id === Number(id)
-      );
-
-    if (!category) {
-      return;
-    }
-
-    setName(category.name);
-  }, [id, isEdit]);
+    const [name, setName] = useState(
+    category?.name ?? ""
+    );
 
   const handleSave = () => {
     if (!name.trim()) {
