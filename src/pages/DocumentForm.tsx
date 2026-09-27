@@ -20,9 +20,12 @@ import { expenseDocuments } from "../mocks/expenseDocuments";
 import { issuerCompanies } from "../mocks/issuerCompanies";
 import { projects } from "../mocks/projects";
 import { users } from "../mocks/users";
+import { expenseClaims } from "../mocks/expenseClaims";
 
 import { DocumentStatus } from "../models/DocumentStatus";
+import { ExpenseClaimStatus } from "../models/ExpenseClaimStatus";
 import { UserRole } from "../models/UserRole";
+
 import { useAuth } from "../hooks/useAuth";
 
 export default function DocumentForm() {
@@ -42,6 +45,9 @@ export default function DocumentForm() {
         : ""
     );
 
+  const [expenseClaimId, setExpenseClaimId] =
+    useState<number | "">("");
+
   const [issueDate, setIssueDate] =
     useState("");
 
@@ -53,6 +59,29 @@ export default function DocumentForm() {
 
   const [imageUrl, setImageUrl] =
     useState("");
+
+  /*
+   * Rendiciones disponibles para el documento.
+   *
+   * Solo mostramos rendiciones del trabajador
+   * y proyecto seleccionados.
+   *
+   * Solo se pueden asociar rendiciones:
+   *
+   *   DRAFT
+   *   RETURNED
+   *
+   * La rendición es opcional.
+   */
+  const availableExpenseClaims =
+    expenseClaims.filter(claim =>
+      claim.employeeId === employeeId &&
+      claim.projectId === projectId &&
+      (
+        claim.status === ExpenseClaimStatus.Draft ||
+        claim.status === ExpenseClaimStatus.Returned
+      )
+    );
 
   const handleSave = () => {
     if (
@@ -98,24 +127,47 @@ export default function DocumentForm() {
 
     expenseDocuments.push({
       id: newId,
+
       sourcePhone: null,
+
       issuerCompanyId,
+
       issuerCompanyRut:
         issuerCompany?.rut ?? null,
+
       projectId,
+
       employeeId,
-      expenseClaimId: null,
+
+      /*
+       * La rendición es opcional.
+       */
+      expenseClaimId:
+        expenseClaimId === ""
+          ? null
+          : expenseClaimId,
+
       issueDate,
-      sentAt: new Date().toISOString(),
+
+      sentAt:
+        new Date().toISOString(),
+
       total: numericTotal,
-      imageUrl: imageUrl.trim(),
+
+      imageUrl:
+        imageUrl.trim(),
+
       documentNumber:
         documentNumber.trim(),
+
       duplicateOfDocumentId: null,
-      status: DocumentStatus.Pending
+
+      status:
+        DocumentStatus.Pending
     });
 
     alert("Documento creado correctamente.");
+
     navigate("/documents");
   };
 
@@ -131,7 +183,9 @@ export default function DocumentForm() {
       >
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate("/documents")}
+          onClick={() =>
+            navigate("/documents")
+          }
         >
           Volver
         </Button>
@@ -185,7 +239,8 @@ export default function DocumentForm() {
             >
               {issuerCompanies
                 .filter(
-                  company => company.active
+                  company =>
+                    company.active
                 )
                 .map(company => (
                   <MenuItem
@@ -210,11 +265,17 @@ export default function DocumentForm() {
             <Select
               value={projectId}
               label="Proyecto"
-              onChange={event =>
+              onChange={event => {
                 setProjectId(
                   Number(event.target.value)
-                )
-              }
+                );
+
+                /*
+                 * El cambio de proyecto puede
+                 * invalidar la rendición seleccionada.
+                 */
+                setExpenseClaimId("");
+              }}
             >
               {projects.map(project => (
                 <MenuItem
@@ -242,11 +303,17 @@ export default function DocumentForm() {
                 user?.role ===
                 UserRole.Employee
               }
-              onChange={event =>
+              onChange={event => {
                 setEmployeeId(
                   Number(event.target.value)
-                )
-              }
+                );
+
+                /*
+                 * El cambio de trabajador puede
+                 * invalidar la rendición seleccionada.
+                 */
+                setExpenseClaimId("");
+              }}
             >
               {users
                 .filter(
@@ -262,6 +329,45 @@ export default function DocumentForm() {
                     {employee.name}
                   </MenuItem>
                 ))}
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth>
+            <InputLabel>
+              Rendición
+            </InputLabel>
+
+            <Select
+              value={expenseClaimId}
+              label="Rendición"
+              disabled={
+                employeeId === "" ||
+                projectId === ""
+              }
+              onChange={event =>
+                setExpenseClaimId(
+                  event.target.value === ""
+                    ? ""
+                    : Number(
+                        event.target.value
+                      )
+                )
+              }
+            >
+              <MenuItem value="">
+                Sin rendición
+              </MenuItem>
+
+              {availableExpenseClaims.map(
+                claim => (
+                  <MenuItem
+                    key={claim.id}
+                    value={claim.id}
+                  >
+                    {claim.title}
+                  </MenuItem>
+                )
+              )}
             </Select>
           </FormControl>
 
