@@ -35,7 +35,6 @@ import {
 } from "../utils/documentStatusUtils";
 
 export default function ExpenseForm() {
-
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -61,7 +60,6 @@ export default function ExpenseForm() {
     user?.role === UserRole.Employee;
 
   const employees = users.filter(employee => {
-
     if (employee.role !== UserRole.Employee) {
       return false;
     }
@@ -74,9 +72,7 @@ export default function ExpenseForm() {
   });
 
   useEffect(() => {
-
     async function loadDocuments() {
-
       if (!selectedEmployeeId || !selectedProjectId) {
         setDocuments([]);
         return;
@@ -89,18 +85,16 @@ export default function ExpenseForm() {
           document.employeeId === selectedEmployeeId &&
           document.projectId === selectedProjectId &&
           document.expenseClaimId === null &&
-          document.status === DocumentStatus.Validated
+          document.status === DocumentStatus.Pending
       );
 
       setDocuments(availableDocuments);
     }
 
     loadDocuments();
-
   }, [selectedEmployeeId, selectedProjectId]);
 
   const handleEmployeeChange = (employeeId: number) => {
-
     setSelectedEmployeeId(employeeId);
     setSelectedProjectId(null);
     setSelectedDocuments([]);
@@ -117,7 +111,6 @@ export default function ExpenseForm() {
   );
 
   const handleToggleDocument = (documentId: number) => {
-
     const document = documents.find(
       document => document.id === documentId
     );
@@ -127,12 +120,11 @@ export default function ExpenseForm() {
     }
 
     // Seguridad adicional en la interfaz.
-    if (document.status !== DocumentStatus.Validated) {
+    if (document.status !== DocumentStatus.Pending) {
       return;
     }
 
     setSelectedDocuments(current => {
-
       if (current.includes(documentId)) {
         return current.filter(id => id !== documentId);
       }
@@ -152,7 +144,6 @@ export default function ExpenseForm() {
     );
 
   const handleCreateExpense = async () => {
-
     if (!user) {
       return;
     }
@@ -178,7 +169,6 @@ export default function ExpenseForm() {
     }
 
     try {
-
       await createExpenseClaim({
         title: title.trim(),
         employeeId: selectedEmployeeId,
@@ -190,9 +180,7 @@ export default function ExpenseForm() {
       alert("Rendición creada correctamente");
 
       navigate("/expenses");
-
     } catch (error) {
-
       console.error(error);
 
       const message =
@@ -216,7 +204,7 @@ export default function ExpenseForm() {
       <TextField
         label="Título de la rendición"
         value={title}
-        onChange={(event) =>
+        onChange={event =>
           setTitle(event.target.value)
         }
         fullWidth
@@ -244,7 +232,6 @@ export default function ExpenseForm() {
           mb: 3
         }}
       >
-
         {!isEmployee && (
           <FormControl fullWidth>
             <InputLabel>Empleado</InputLabel>
@@ -252,7 +239,7 @@ export default function ExpenseForm() {
             <Select
               value={selectedEmployeeId ?? ""}
               label="Empleado"
-              onChange={(event) =>
+              onChange={event =>
                 handleEmployeeChange(
                   Number(event.target.value)
                 )
@@ -277,17 +264,14 @@ export default function ExpenseForm() {
             value={selectedProjectId ?? ""}
             label="Proyecto"
             disabled={!selectedEmployeeId}
-            onChange={(event) => {
-
+            onChange={event => {
               setSelectedProjectId(
                 Number(event.target.value)
               );
 
               setSelectedDocuments([]);
-
             }}
           >
-
             {availableProjects.map(project => (
               <MenuItem
                 key={project.id}
@@ -296,14 +280,11 @@ export default function ExpenseForm() {
                 {project.name}
               </MenuItem>
             ))}
-
           </Select>
         </FormControl>
-
       </Box>
 
       <Paper sx={{ p: 3 }}>
-
         <Typography
           variant="h6"
           sx={{ mb: 2 }}
@@ -312,26 +293,19 @@ export default function ExpenseForm() {
         </Typography>
 
         {documents.length === 0 ? (
-
           <Typography color="text.secondary">
-            No tienes documentos validados disponibles
+            No tienes documentos pendientes disponibles
             para esta rendición.
           </Typography>
-
         ) : (
-
           documents.map(document => (
-
             <Box key={document.id}>
-
               <FormControlLabel
                 control={
                   <Checkbox
-                    checked={
-                      selectedDocuments.includes(
-                        document.id
-                      )
-                    }
+                    checked={selectedDocuments.includes(
+                      document.id
+                    )}
                     onChange={() =>
                       handleToggleDocument(
                         document.id
@@ -341,7 +315,6 @@ export default function ExpenseForm() {
                 }
                 label={
                   <Box>
-
                     <Box
                       sx={{
                         display: "flex",
@@ -349,7 +322,6 @@ export default function ExpenseForm() {
                         gap: 1
                       }}
                     >
-
                       <Typography>
                         Documento{" "}
                         {document.documentNumber ??
@@ -365,9 +337,7 @@ export default function ExpenseForm() {
                           document.status
                         )}
                       />
-
                     </Box>
-
                   </Box>
                 }
               />
@@ -384,11 +354,8 @@ export default function ExpenseForm() {
               </Typography>
 
               <Divider sx={{ my: 1 }} />
-
             </Box>
-
           ))
-
         )}
 
         <Box
@@ -398,12 +365,10 @@ export default function ExpenseForm() {
             mt: 3
           }}
         >
-
           <Typography variant="h6">
             Total seleccionado: $
             {selectedTotal.toLocaleString("es-CL")}
           </Typography>
-
         </Box>
 
         <Box
@@ -414,7 +379,6 @@ export default function ExpenseForm() {
             mt: 3
           }}
         >
-
           <Button
             variant="outlined"
             onClick={() =>
@@ -430,9 +394,7 @@ export default function ExpenseForm() {
           >
             Crear Rendición
           </Button>
-
         </Box>
-
       </Paper>
     </>
   );
