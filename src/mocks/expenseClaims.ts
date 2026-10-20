@@ -1,5 +1,4 @@
 import type { ExpenseClaim } from "../models/ExpenseClaim";
-
 import { ExpenseClaimStatus } from "../models/ExpenseClaimStatus";
 
 export const expenseClaims: ExpenseClaim[] = [
@@ -7,7 +6,7 @@ export const expenseClaims: ExpenseClaim[] = [
     id: 1,
     title: "Rendición de agosto - Fernando",
     employeeId: 2,
-    projectId: 1,
+    projectId: null,
     createdBy: 2,
     createdAt: "2026-08-08T10:30:00",
     status: ExpenseClaimStatus.Approved,
@@ -17,9 +16,9 @@ export const expenseClaims: ExpenseClaim[] = [
 
   {
     id: 2,
-    title: "Gastos faena norte",
+    title: "Rendición en borrador - Marcos",
     employeeId: 2,
-    projectId: 2,
+    projectId: null,
     createdBy: 2,
     createdAt: "2026-08-12T09:15:00",
     status: ExpenseClaimStatus.Draft,
@@ -29,11 +28,11 @@ export const expenseClaims: ExpenseClaim[] = [
 
   {
     id: 3,
-    title: "Gastos de terreno",
+    title: "Rendición pendiente de aprobación",
     employeeId: 3,
-    projectId: 3,
+    projectId: null,
     createdBy: 3,
-    createdAt: "2026-08-10T14:40:00",
+    createdAt: "2026-09-28T14:40:00",
     status: ExpenseClaimStatus.Submitted,
     reviewedBy: null,
     reviewedAt: null
@@ -43,7 +42,7 @@ export const expenseClaims: ExpenseClaim[] = [
     id: 4,
     title: "Rendición devuelta para corrección",
     employeeId: 2,
-    projectId: 1,
+    projectId: null,
     createdBy: 2,
     createdAt: "2026-08-06T11:20:00",
     status: ExpenseClaimStatus.Returned,

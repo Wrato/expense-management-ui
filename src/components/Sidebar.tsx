@@ -1,3 +1,4 @@
+
 import {
   Drawer,
   List,
@@ -13,6 +14,7 @@ import BusinessIcon from "@mui/icons-material/Business";
 import CategoryIcon from "@mui/icons-material/Category";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import PeopleIcon from "@mui/icons-material/People";
+import AccountTreeIcon from "@mui/icons-material/AccountTree";
 
 import { NavLink } from "react-router-dom";
 
@@ -26,37 +28,75 @@ const menuItems = [
     text: "Dashboard",
     icon: <DashboardIcon />,
     path: "/dashboard",
-    roles: [UserRole.Admin, UserRole.Accountant, UserRole.Employee],
+    roles: [
+      UserRole.Admin,
+      UserRole.Accountant,
+      UserRole.Employee,
+      UserRole.Approver
+    ],
   },
   {
     text: "Documentos",
     icon: <ReceiptIcon />,
     path: "/documents",
-    roles: [UserRole.Admin, UserRole.Accountant, UserRole.Employee],
+    roles: [
+      UserRole.Admin,
+      UserRole.Accountant,
+      UserRole.Employee,
+      UserRole.Approver
+    ],
   },
   {
     text: "Rendiciones",
     icon: <AssignmentIcon />,
     path: "/expenses",
-    roles: [UserRole.Admin, UserRole.Accountant, UserRole.Employee],
+    roles: [
+      UserRole.Admin,
+      UserRole.Accountant,
+      UserRole.Employee,
+      UserRole.Approver
+    ],
+  },
+  {
+    text: "Aprobaciones",
+    icon: <AssignmentIcon />,
+    path: "/approvals",
+    roles: [
+      UserRole.Admin,
+      UserRole.Approver
+    ],
   },
   {
     text: "Empresas",
     icon: <BusinessIcon />,
     path: "/issuer-companies",
-    roles: [UserRole.Admin],
+    roles: [
+      UserRole.Admin
+    ],
   },
   {
     text: "Categorías",
     icon: <CategoryIcon />,
     path: "/categories",
-    roles: [UserRole.Admin],
+    roles: [
+      UserRole.Admin
+    ],
+  },
+  {
+    text: "Tipos de costo",
+    icon: <AccountTreeIcon />,
+    path: "/cost-types",
+    roles: [
+      UserRole.Admin
+    ],
   },
   {
     text: "Usuarios",
     icon: <PeopleIcon />,
     path: "/users",
-    roles: [UserRole.Admin],
+    roles: [
+      UserRole.Admin
+    ],
   },
 ];
 
@@ -69,7 +109,6 @@ export default function Sidebar() {
       sx={{
         width: drawerWidth,
         flexShrink: 0,
-
         "& .MuiDrawer-paper": {
           width: drawerWidth,
           boxSizing: "border-box",
@@ -80,7 +119,11 @@ export default function Sidebar() {
 
       <List>
         {menuItems
-          .filter((item) => user && item.roles.includes(user.role))
+          .filter(
+            item =>
+              user &&
+              item.roles.includes(user.role)
+          )
           .map(({ text, icon, path }) => (
             <ListItemButton
               key={path}
@@ -90,18 +133,19 @@ export default function Sidebar() {
                 borderRadius: 2,
                 mx: 1,
                 my: 0.5,
-
                 "&.active": {
                   backgroundColor: "primary.main",
                   color: "primary.contrastText",
-
                   "& .MuiListItemIcon-root": {
                     color: "inherit",
                   },
                 },
               }}
             >
-              <ListItemIcon>{icon}</ListItemIcon>
+              <ListItemIcon>
+                {icon}
+              </ListItemIcon>
+
               <ListItemText primary={text} />
             </ListItemButton>
           ))}

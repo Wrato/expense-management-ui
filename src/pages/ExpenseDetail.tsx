@@ -9,9 +9,11 @@ import {
   TableHead,
   TableRow,
   Button,
-  Chip
+  Chip,
+  Tooltip
 } from "@mui/material";
 
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import IconButton from "@mui/material/IconButton";
 
@@ -37,15 +39,6 @@ import type {
   ExpenseDocument
 } from "../models/ExpenseDocument";
 
-import type {
-  Project
-} from "../models/Project";
-
-import {
-  UserRole
-} from "../models/UserRole";
-
-
 import {
   getExpenseClaims,
   submitExpenseClaim
@@ -56,14 +49,8 @@ import {
 } from "../services/expenseDocumentService";
 
 import {
-  getProjects
-} from "../services/projectService";
-
-
-import {
   useAuth
 } from "../hooks/useAuth";
-
 
 import {
   getExpenseClaimStatusColor,
@@ -75,6 +62,9 @@ import {
   getDocumentStatusLabel
 } from "../utils/documentStatusUtils";
 
+import {
+  canApproveExpenseClaim
+} from "../utils/permissions";
 
 export default function ExpenseDetail() {
 
@@ -91,9 +81,6 @@ export default function ExpenseDetail() {
   const [documents, setDocuments] =
     useState<ExpenseDocument[]>([]);
 
-  const [projects, setProjects] =
-    useState<Project[]>([]);
-
 
   useEffect(() => {
 
@@ -108,9 +95,6 @@ export default function ExpenseDetail() {
 
       const documentsResponse =
         await getDocuments();
-
-      const projectsResponse =
-        await getProjects();
 
 
       const selectedClaim =
@@ -134,10 +118,6 @@ export default function ExpenseDetail() {
 
       setDocuments(
         claimDocuments
-      );
-
-      setProjects(
-        projectsResponse
       );
 
     }
@@ -167,23 +147,6 @@ export default function ExpenseDetail() {
     );
 
 
-  const getProjectName = (
-    projectId: number | null
-  ) => {
-
-    if (projectId === null) {
-      return "Sin proyecto";
-    }
-
-
-    return projects.find(
-      project =>
-        project.id === projectId
-    )?.name ?? "Proyecto no encontrado";
-
-  };
-
-
   /*
    * Una rendición solamente puede
    * modificarse mientras está en
@@ -197,16 +160,14 @@ export default function ExpenseDetail() {
 
 
   /*
-   * Accountant y Admin pueden revisar
-   * una rendición enviada.
+   * Solamente Admin y Approver
+   * pueden revisar una rendición.
    */
-  const canReview =
-    (
-      user?.role === UserRole.Accountant ||
-      user?.role === UserRole.Admin
-    ) &&
-    claim.status ===
-      ExpenseClaimStatus.Submitted;
+  const canApprove =
+    user !== null &&
+    canApproveExpenseClaim(
+      user.role
+    );
 
 
   /*
@@ -221,11 +182,6 @@ export default function ExpenseDetail() {
    */
   const canSubmit =
     user !== null &&
-    (
-      user.role === UserRole.Employee ||
-      user.role === UserRole.Accountant ||
-      user.role === UserRole.Admin
-    ) &&
     (
       claim.status ===
         ExpenseClaimStatus.Draft ||
@@ -358,7 +314,9 @@ export default function ExpenseDetail() {
           )}
 
 
-          {canReview && (
+          {canApprove &&
+            claim.status ===
+              ExpenseClaimStatus.Submitted && (
 
             <Button
               variant="contained"
@@ -415,7 +373,7 @@ export default function ExpenseDetail() {
             display: "grid",
             gridTemplateColumns: {
               xs: "1fr",
-              md: "repeat(3, 1fr)"
+              md: "repeat(2, 1fr)"
             },
             gap: 3
           }}
@@ -436,25 +394,6 @@ export default function ExpenseDetail() {
                 claim.createdAt
               ).toLocaleDateString(
                 "es-CL"
-              )}
-            </Typography>
-
-          </Box>
-
-
-          <Box>
-
-            <Typography
-              variant="body2"
-              color="text.secondary"
-            >
-              Proyecto
-            </Typography>
-
-
-            <Typography variant="body1">
-              {getProjectName(
-                claim.projectId
               )}
             </Typography>
 
@@ -606,22 +545,19 @@ export default function ExpenseDetail() {
 
                   <TableCell>
 
-                    <Button
-                      size="small"
-                      onClick={() =>
-                        navigate(
-                          `/documents/${document.id}`,
-                          {
-                            state: {
-                              returnTo:
-                                `/expenses/${claim.id}`
-                            }
-                          }
-                        )
-                      }
-                    >
-                      Ver documento
-                    </Button>
+                    <Tooltip title="Ver documento">
+                      <IconButton
+                        size="small"
+                        onClick={() =>
+                          navigate(`/documents/${document.id}`, {
+                            state: { returnTo: `/expenses/${claim.id}` }
+                          })
+                        }
+                        sx={{ color: "text.secondary" }}
+                      >
+                        <VisibilityIcon />
+                      </IconButton>
+                    </Tooltip>
 
                   </TableCell>
 

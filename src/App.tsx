@@ -11,12 +11,14 @@ import Documents from "./pages/Documents";
 import DocumentForm from "./pages/DocumentForm";
 import DocumentDetail from "./pages/DocumentDetail";
 import DocumentEdit from "./pages/DocumentEdit";
+import Approvals from "./pages/Approvals";
 import IssuerCompanies from "./pages/IssuerCompanies";
 import IssuerCompanyForm from "./pages/IssuerCompanyForm";
 import Categories from "./pages/Categories";
 import CategoryForm from "./pages/CategoryForm";
 import Users from "./pages/Users";
 import UserForm from "./pages/UserForm";
+import CostTypes from "./pages/CostTypes";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleRoute from "./routes/RoleRoute";
@@ -89,13 +91,38 @@ function App() {
           }
         />
 
+        <Route 
+          path="/expenses/:id/review" 
+          element={ 
+            <ProtectedRoute>
+              <RoleRoute
+                allowedRoles={[
+                  UserRole.Admin,
+                  UserRole.Approver
+                ]}
+              >
+                <Layout>
+                  <ExpenseReview />
+                </Layout>
+              </RoleRoute>
+            </ProtectedRoute>
+          } 
+        />
+
         <Route
-          path="/expenses/:id/review"
+          path="/approvals"
           element={
             <ProtectedRoute>
-              <Layout>
-                <ExpenseReview />
-              </Layout>
+              <RoleRoute
+                allowedRoles={[
+                  UserRole.Admin,
+                  UserRole.Approver
+                ]}
+              >
+                <Layout>
+                  <Approvals />
+                </Layout>
+              </RoleRoute>
             </ProtectedRoute>
           }
         />
@@ -217,6 +244,21 @@ function App() {
             </ProtectedRoute> 
           } 
         />
+
+        
+        <Route
+          path="/cost-types"
+          element={
+            <ProtectedRoute>
+              <RoleRoute allowedRoles={[UserRole.Admin]}>
+                <Layout>
+                  <CostTypes />
+                </Layout>
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+        />
+
 
         <Route 
           path="/users" 

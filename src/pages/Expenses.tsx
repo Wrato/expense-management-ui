@@ -10,13 +10,17 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Chip
+  Chip,
+  IconButton,
+  Tooltip
 } from "@mui/material";
 
 import AddIcon from "@mui/icons-material/Add";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import EditIcon from "@mui/icons-material/Edit";
+import SendIcon from "@mui/icons-material/Send";
 
 import { useNavigate } from "react-router-dom";
-
 import { useEffect, useState } from "react";
 
 import { useAuth } from "../hooks/useAuth";
@@ -24,7 +28,6 @@ import { useAuth } from "../hooks/useAuth";
 import type { ExpenseClaim } from "../models/ExpenseClaim";
 import type { ExpenseDocument } from "../models/ExpenseDocument";
 import { ExpenseClaimStatus } from "../models/ExpenseClaimStatus";
-import type { Project } from "../models/Project";
 import { UserRole } from "../models/UserRole";
 
 import { users } from "../mocks/users";
@@ -35,7 +38,6 @@ import {
 } from "../services/expenseClaimService";
 
 import { getDocuments } from "../services/expenseDocumentService";
-import { getProjects } from "../services/projectService";
 
 import {
   getExpenseClaimStatusColor,
@@ -45,10 +47,9 @@ import {
 export default function Expenses() {
   const [claims, setClaims] = useState<ExpenseClaim[]>([]);
   const [documents, setDocuments] = useState<ExpenseDocument[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [search, setSearch] = useState("");
 
   const { user } = useAuth();
-
   const navigate = useNavigate();
 
   const isEmployee = user?.role === UserRole.Employee;
@@ -57,33 +58,39 @@ export default function Expenses() {
     async function loadData() {
       const claimsResponse = await getExpenseClaims();
       const documentsResponse = await getDocuments();
-      const projectsResponse = await getProjects();
 
       setClaims(claimsResponse);
       setDocuments(documentsResponse);
-      setProjects(projectsResponse);
     }
 
     loadData();
   }, []);
 
-  const visibleClaims = isEmployee
-    ? claims.filter(
-        claim => claim.employeeId === user?.id
-      )
-    : claims;
+  const visibleClaims = claims.filter(claim => {
+    const isVisibleToUser =
+      !isEmployee || claim.employeeId === user?.id;
+
+    const employee = users.find(
+      item => item.id === claim.employeeId
+    );
+
+    const searchText = search.toLowerCase().trim();
+
+    const matchesSearch =
+      !searchText ||
+      claim.title.toLowerCase().includes(searchText) ||
+      (employee?.name ?? "").toLowerCase().includes(searchText) ||
+      getExpenseClaimStatusLabel(claim.status)
+        .toLowerCase()
+        .includes(searchText);
+
+    return isVisibleToUser && matchesSearch;
+  });
 
   const getClaimTotal = (claimId: number) => {
     return documents
-      .filter(
-        document =>
-          document.expenseClaimId === claimId
-      )
-      .reduce(
-        (sum, document) =>
-          sum + (document.total ?? 0),
-        0
-      );
+      .filter(document => document.expenseClaimId === claimId)
+      .reduce((sum, document) => sum + (document.total ?? 0), 0);
   };
 
   const canSubmitClaim = (claim: ExpenseClaim) => {
@@ -99,29 +106,49 @@ export default function Expenses() {
     }
 
     const claimDocuments = documents.filter(
-      document =>
-        document.expenseClaimId === claim.id
+      document => document.expenseClaimId === claim.id
     );
 
     return claimDocuments.length > 0;
   };
 
-  const goToNewExpense = () => {
-    navigate("/new-expense");
-  };
-
-  const getProjectName = (
-    projectId: number | null
-  ) => {
-    if (projectId === null) {
-      return "-";
+  const canEditClaim = (claim: ExpenseClaim) => {
+    if (!user) {
+      return false;
     }
 
-    return (
-      projects.find(
-        project => project.id === projectId
-      )?.name ?? "-"
-    );
+    const editableStatus =
+      claim.status === ExpenseClaimStatus.Draft ||
+      claim.status === ExpenseClaimStatus.Returned;
+
+    if (!editableStatus) {
+      return false;
+    }
+
+    if (user.role === UserRole.Admin) {
+      return true;
+    }
+
+    if (user.role === UserRole.Employee) {
+      return claim.employeeId === user.id;
+    }
+
+    if (user.role === UserRole.Accountant) {
+      const employee = users.find(
+        item => item.id === claim.employeeId
+      );
+
+      return (
+        employee !== undefined &&
+        employee.companyId === user.companyId
+      );
+    }
+
+    return false;
+  };
+
+  const goToNewExpense = () => {
+    navigate("/new-expense");
   };
 
   const handleSubmitClaim = async (
@@ -135,11 +162,10 @@ export default function Expenses() {
     }
 
     try {
-      const updatedClaim =
-        await submitExpenseClaim(
-          claim.id,
-          user
-        );
+      const updatedClaim = await submitExpenseClaim(
+        claim.id,
+        user
+      );
 
       setClaims(currentClaims =>
         currentClaims.map(currentClaim =>
@@ -149,9 +175,7 @@ export default function Expenses() {
         )
       );
 
-      alert(
-        "Rendición enviada a revisión correctamente."
-      );
+      alert("Rendición enviada a revisión correctamente.");
     } catch (error) {
       console.error(error);
 
@@ -162,6 +186,22 @@ export default function Expenses() {
 
       alert(message);
     }
+  };
+
+  const handleOpenClaim = (
+    event: React.MouseEvent,
+    claimId: number
+  ) => {
+    event.stopPropagation();
+    navigate(`/expenses/${claimId}`);
+  };
+
+  const handleEditClaim = (
+    event: React.MouseEvent,
+    claimId: number
+  ) => {
+    event.stopPropagation();
+    navigate(`/expenses/${claimId}/edit`);
   };
 
   return (
@@ -175,24 +215,27 @@ export default function Expenses() {
         }}
       >
         <Typography variant="h4">
-          {isEmployee
-            ? "Mis Rendiciones"
-            : "Rendiciones"}
+          {isEmployee ? "Mis Rendiciones" : "Rendiciones"}
         </Typography>
 
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={goToNewExpense}
-        >
-          Nueva Rendición
-        </Button>
+        {(user?.role === UserRole.Employee ||
+          user?.role === UserRole.Admin) && (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={goToNewExpense}
+          >
+            Nueva Rendición
+          </Button>
+        )}
       </Box>
 
       <TextField
         label="Buscar"
         size="small"
         fullWidth
+        value={search}
+        onChange={event => setSearch(event.target.value)}
         sx={{ mb: 3 }}
       />
 
@@ -204,34 +247,26 @@ export default function Expenses() {
               <TableCell>Rendición</TableCell>
 
               {!isEmployee && (
-                <TableCell>
-                  Trabajador
-                </TableCell>
+                <TableCell>Trabajador</TableCell>
               )}
 
-              <TableCell>Proyecto</TableCell>
               <TableCell>Total</TableCell>
               <TableCell>Estado</TableCell>
-              <TableCell>Acciones</TableCell>
+              <TableCell align="center">Acciones</TableCell>
             </TableRow>
           </TableHead>
 
           <TableBody>
             {visibleClaims.map(claim => {
               const employee = users.find(
-                user =>
-                  user.id === claim.employeeId
+                item => item.id === claim.employeeId
               );
 
               return (
                 <TableRow
                   key={claim.id}
                   hover
-                  onClick={() =>
-                    navigate(
-                      `/expenses/${claim.id}`
-                    )
-                  }
+                  onClick={() => navigate(`/expenses/${claim.id}`)}
                   sx={{ cursor: "pointer" }}
                 >
                   <TableCell>
@@ -249,49 +284,82 @@ export default function Expenses() {
                   )}
 
                   <TableCell>
-                    {getProjectName(
-                      claim.projectId
-                    )}
-                  </TableCell>
-
-                  <TableCell>
                     $
-                    {getClaimTotal(
-                      claim.id
-                    ).toLocaleString("es-CL")}
+                    {getClaimTotal(claim.id).toLocaleString("es-CL")}
                   </TableCell>
 
                   <TableCell>
                     <Chip
-                      label={getExpenseClaimStatusLabel(
-                        claim.status
-                      )}
-                      color={getExpenseClaimStatusColor(
-                        claim.status
-                      )}
+                      label={getExpenseClaimStatusLabel(claim.status)}
+                      color={getExpenseClaimStatusColor(claim.status)}
                       size="small"
                     />
                   </TableCell>
 
-                  <TableCell>
-                    {canSubmitClaim(claim) && (
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={event =>
-                          handleSubmitClaim(
-                            event,
-                            claim
-                          )
-                        }
-                      >
-                        Enviar a revisión
-                      </Button>
-                    )}
+                  <TableCell align="center">
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        gap: 0.5
+                      }}
+                    >
+                      <Tooltip title="Ver rendición">
+                        <IconButton
+                          size="small"
+                          onClick={event =>
+                            handleOpenClaim(event, claim.id)
+                          }
+                          sx={{ color: "text.secondary" }}
+                        >
+                          <VisibilityIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+
+                      {canEditClaim(claim) && (
+                        <Tooltip title="Editar rendición">
+                          <IconButton
+                            size="small"
+                            onClick={event =>
+                              handleEditClaim(event, claim.id)
+                            }
+                            sx={{ color: "text.secondary" }}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+
+                      {canSubmitClaim(claim) && (
+                        <Tooltip title="Enviar a revisión">
+                          <IconButton
+                            size="small"
+                            onClick={event =>
+                              handleSubmitClaim(event, claim)
+                            }
+                            sx={{ color: "text.secondary" }}
+                          >
+                            <SendIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
                   </TableCell>
                 </TableRow>
               );
             })}
+
+            {visibleClaims.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={isEmployee ? 5 : 6}
+                  align="center"
+                >
+                  No se encontraron rendiciones.
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </TableContainer>

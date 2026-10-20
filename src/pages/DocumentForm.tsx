@@ -1,3 +1,4 @@
+
 import {
   Box,
   Typography,
@@ -18,9 +19,9 @@ import { useState } from "react";
 
 import { expenseDocuments } from "../mocks/expenseDocuments";
 import { issuerCompanies } from "../mocks/issuerCompanies";
-import { projects } from "../mocks/projects";
 import { users } from "../mocks/users";
 import { expenseClaims } from "../mocks/expenseClaims";
+import { costTypes } from "../mocks/costTypes";
 
 import { DocumentStatus } from "../models/DocumentStatus";
 import { ExpenseClaimStatus } from "../models/ExpenseClaimStatus";
@@ -35,9 +36,6 @@ export default function DocumentForm() {
   const [issuerCompanyId, setIssuerCompanyId] =
     useState<number | "">("");
 
-  const [projectId, setProjectId] =
-    useState<number | "">("");
-
   const [employeeId, setEmployeeId] =
     useState<number | "">(
       user?.role === UserRole.Employee
@@ -48,45 +46,48 @@ export default function DocumentForm() {
   const [expenseClaimId, setExpenseClaimId] =
     useState<number | "">("");
 
-  const [issueDate, setIssueDate] =
-    useState("");
+  const [costTypeLevel1Id, setCostTypeLevel1Id] =
+    useState<number | "">("");
 
-  const [documentNumber, setDocumentNumber] =
-    useState("");
+  const [costTypeLevel2Id, setCostTypeLevel2Id] =
+    useState<number | "">("");
 
-  const [total, setTotal] =
-    useState("");
+  const [costTypeLevel3Id, setCostTypeLevel3Id] =
+    useState<number | "">("");
 
-  const [imageUrl, setImageUrl] =
-    useState("");
+  const [issueDate, setIssueDate] = useState("");
+  const [documentNumber, setDocumentNumber] = useState("");
+  const [total, setTotal] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
 
-  /*
-   * Rendiciones disponibles para el documento.
-   *
-   * Solo mostramos rendiciones del trabajador
-   * y proyecto seleccionados.
-   *
-   * Solo se pueden asociar rendiciones:
-   *
-   *   DRAFT
-   *   RETURNED
-   *
-   * La rendición es opcional.
-   */
-  const availableExpenseClaims =
-    expenseClaims.filter(claim =>
+  const level1Types = costTypes.filter(
+    item => item.level === 1
+  );
+
+  const level2Types = costTypes.filter(
+    item =>
+      item.level === 2 &&
+      item.parentId === costTypeLevel1Id
+  );
+
+  const level3Types = costTypes.filter(
+    item =>
+      item.level === 3 &&
+      item.parentId === costTypeLevel2Id
+  );
+
+  const availableExpenseClaims = expenseClaims.filter(
+    claim =>
       claim.employeeId === employeeId &&
-      claim.projectId === projectId &&
       (
         claim.status === ExpenseClaimStatus.Draft ||
         claim.status === ExpenseClaimStatus.Returned
       )
-    );
+  );
 
   const handleSave = () => {
     if (
       issuerCompanyId === "" ||
-      projectId === "" ||
       employeeId === "" ||
       !issueDate ||
       !documentNumber.trim() ||
@@ -114,60 +115,36 @@ export default function DocumentForm() {
     const newId =
       Math.max(
         0,
-        ...expenseDocuments.map(
-          document => document.id
-        )
+        ...expenseDocuments.map(document => document.id)
       ) + 1;
 
-    const issuerCompany =
-      issuerCompanies.find(
-        company =>
-          company.id === issuerCompanyId
-      );
+    const issuerCompany = issuerCompanies.find(
+      company => company.id === issuerCompanyId
+    );
 
     expenseDocuments.push({
       id: newId,
-
       sourcePhone: null,
-
       issuerCompanyId,
-
-      issuerCompanyRut:
-        issuerCompany?.rut ?? null,
-
-      projectId,
-
+      issuerCompanyRut: issuerCompany?.rut ?? null,
+      projectId: null,
       employeeId,
-
-      /*
-       * La rendición es opcional.
-       */
       expenseClaimId:
-        expenseClaimId === ""
+        expenseClaimId === "" ? null : expenseClaimId,
+      costTypeId:
+        costTypeLevel3Id === ""
           ? null
-          : expenseClaimId,
-
+          : costTypeLevel3Id,
       issueDate,
-
-      sentAt:
-        new Date().toISOString(),
-
+      sentAt: new Date().toISOString(),
       total: numericTotal,
-
-      imageUrl:
-        imageUrl.trim(),
-
-      documentNumber:
-        documentNumber.trim(),
-
+      imageUrl: imageUrl.trim(),
+      documentNumber: documentNumber.trim(),
       duplicateOfDocumentId: null,
-
-      status:
-        DocumentStatus.Pending
+      status: DocumentStatus.Pending
     });
 
     alert("Documento creado correctamente.");
-
     navigate("/documents");
   };
 
@@ -183,9 +160,7 @@ export default function DocumentForm() {
       >
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() =>
-            navigate("/documents")
-          }
+          onClick={() => navigate("/documents")}
         >
           Volver
         </Button>
@@ -195,12 +170,7 @@ export default function DocumentForm() {
         </Typography>
       </Box>
 
-      <Paper
-        sx={{
-          p: 3,
-          maxWidth: 700
-        }}
-      >
+      <Paper sx={{ p: 3, maxWidth: 700 }}>
         <Box
           sx={{
             display: "flex",
@@ -211,121 +181,47 @@ export default function DocumentForm() {
           <TextField
             label="URL del documento"
             value={imageUrl}
-            onChange={event =>
-              setImageUrl(event.target.value)
-            }
+            onChange={event => setImageUrl(event.target.value)}
             required
             fullWidth
             placeholder="https://..."
             helperText="Pega aquí el enlace al documento almacenado externamente"
           />
 
-          <FormControl
-            fullWidth
-            required
-          >
-            <InputLabel>
-              Empresa emisora
-            </InputLabel>
-
+          <FormControl fullWidth required>
+            <InputLabel>Empresa emisora</InputLabel>
             <Select
               value={issuerCompanyId}
               label="Empresa emisora"
               onChange={event =>
-                setIssuerCompanyId(
-                  Number(event.target.value)
-                )
+                setIssuerCompanyId(Number(event.target.value))
               }
             >
               {issuerCompanies
-                .filter(
-                  company =>
-                    company.active
-                )
+                .filter(company => company.active)
                 .map(company => (
-                  <MenuItem
-                    key={company.id}
-                    value={company.id}
-                  >
-                    {company.name} -{" "}
-                    {company.rut}
+                  <MenuItem key={company.id} value={company.id}>
+                    {company.name} - {company.rut}
                   </MenuItem>
                 ))}
             </Select>
           </FormControl>
 
-          <FormControl
-            fullWidth
-            required
-          >
-            <InputLabel>
-              Proyecto
-            </InputLabel>
-
-            <Select
-              value={projectId}
-              label="Proyecto"
-              onChange={event => {
-                setProjectId(
-                  Number(event.target.value)
-                );
-
-                /*
-                 * El cambio de proyecto puede
-                 * invalidar la rendición seleccionada.
-                 */
-                setExpenseClaimId("");
-              }}
-            >
-              {projects.map(project => (
-                <MenuItem
-                  key={project.id}
-                  value={project.id}
-                >
-                  {project.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControl
-            fullWidth
-            required
-          >
-            <InputLabel>
-              Trabajador
-            </InputLabel>
-
+          <FormControl fullWidth required>
+            <InputLabel>Trabajador</InputLabel>
             <Select
               value={employeeId}
               label="Trabajador"
-              disabled={
-                user?.role ===
-                UserRole.Employee
-              }
+              disabled={user?.role === UserRole.Employee}
               onChange={event => {
-                setEmployeeId(
-                  Number(event.target.value)
-                );
-
-                /*
-                 * El cambio de trabajador puede
-                 * invalidar la rendición seleccionada.
-                 */
+                setEmployeeId(Number(event.target.value));
                 setExpenseClaimId("");
               }}
             >
               {users
-                .filter(
-                  user =>
-                    user.role ===
-                    UserRole.Employee
-                )
+                .filter(employee => employee.role === UserRole.Employee)
                 .map(employee => (
-                  <MenuItem
-                    key={employee.id}
-                    value={employee.id}
-                  >
+                  <MenuItem key={employee.id} value={employee.id}>
                     {employee.name}
                   </MenuItem>
                 ))}
@@ -333,41 +229,108 @@ export default function DocumentForm() {
           </FormControl>
 
           <FormControl fullWidth>
-            <InputLabel>
-              Rendición
-            </InputLabel>
-
+            <InputLabel>Rendición</InputLabel>
             <Select
               value={expenseClaimId}
               label="Rendición"
-              disabled={
-                employeeId === "" ||
-                projectId === ""
-              }
+              disabled={employeeId === ""}
               onChange={event =>
                 setExpenseClaimId(
                   event.target.value === ""
                     ? ""
-                    : Number(
-                        event.target.value
-                      )
+                    : Number(event.target.value)
+                )
+              }
+            >
+              <MenuItem value="">Sin rendición</MenuItem>
+
+              {availableExpenseClaims.map(claim => (
+                <MenuItem key={claim.id} value={claim.id}>
+                  {claim.title}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <Typography variant="h6">
+            Tipo de costo
+          </Typography>
+
+          <FormControl fullWidth>
+            <InputLabel>Tipo de costo - Nivel 1</InputLabel>
+            <Select
+              value={costTypeLevel1Id}
+              label="Tipo de costo - Nivel 1"
+              onChange={event => {
+                const value = event.target.value;
+
+                setCostTypeLevel1Id(
+                  value === "" ? "" : Number(value)
+                );
+                setCostTypeLevel2Id("");
+                setCostTypeLevel3Id("");
+              }}
+            >
+              <MenuItem value="">
+                <em>Sin asignar</em>
+              </MenuItem>
+
+              {level1Types.map(item => (
+                <MenuItem key={item.id} value={item.id}>
+                  {item.code} - {item.description}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth disabled={costTypeLevel1Id === ""}>
+            <InputLabel>Tipo de costo - Nivel 2</InputLabel>
+            <Select
+              value={costTypeLevel2Id}
+              label="Tipo de costo - Nivel 2"
+              onChange={event => {
+                const value = event.target.value;
+
+                setCostTypeLevel2Id(
+                  value === "" ? "" : Number(value)
+                );
+                setCostTypeLevel3Id("");
+              }}
+            >
+              <MenuItem value="">
+                <em>Sin asignar</em>
+              </MenuItem>
+
+              {level2Types.map(item => (
+                <MenuItem key={item.id} value={item.id}>
+                  {item.code} - {item.description}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth disabled={costTypeLevel2Id === ""}>
+            <InputLabel>Tipo de costo - Nivel 3</InputLabel>
+            <Select
+              value={costTypeLevel3Id}
+              label="Tipo de costo - Nivel 3"
+              onChange={event =>
+                setCostTypeLevel3Id(
+                  event.target.value === ""
+                    ? ""
+                    : Number(event.target.value)
                 )
               }
             >
               <MenuItem value="">
-                Sin rendición
+                <em>Sin asignar</em>
               </MenuItem>
 
-              {availableExpenseClaims.map(
-                claim => (
-                  <MenuItem
-                    key={claim.id}
-                    value={claim.id}
-                  >
-                    {claim.title}
-                  </MenuItem>
-                )
-              )}
+              {level3Types.map(item => (
+                <MenuItem key={item.id} value={item.id}>
+                  {item.code} - {item.description}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
 
@@ -375,15 +338,9 @@ export default function DocumentForm() {
             label="Fecha de emisión"
             type="date"
             value={issueDate}
-            onChange={event =>
-              setIssueDate(
-                event.target.value
-              )
-            }
+            onChange={event => setIssueDate(event.target.value)}
             slotProps={{
-              inputLabel: {
-                shrink: true
-              }
+              inputLabel: { shrink: true }
             }}
             required
             fullWidth
@@ -392,11 +349,7 @@ export default function DocumentForm() {
           <TextField
             label="N° documento"
             value={documentNumber}
-            onChange={event =>
-              setDocumentNumber(
-                event.target.value
-              )
-            }
+            onChange={event => setDocumentNumber(event.target.value)}
             required
             fullWidth
           />
@@ -404,11 +357,7 @@ export default function DocumentForm() {
           <TextField
             label="Total"
             value={total}
-            onChange={event =>
-              setTotal(
-                event.target.value
-              )
-            }
+            onChange={event => setTotal(event.target.value)}
             required
             fullWidth
             placeholder="35000"
@@ -425,9 +374,7 @@ export default function DocumentForm() {
           >
             <Button
               variant="outlined"
-              onClick={() =>
-                navigate("/documents")
-              }
+              onClick={() => navigate("/documents")}
             >
               Cancelar
             </Button>

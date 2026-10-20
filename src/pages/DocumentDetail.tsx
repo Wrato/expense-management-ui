@@ -1,3 +1,4 @@
+
 import {
   Box,
   Typography,
@@ -24,6 +25,7 @@ import { getDocuments } from "../services/expenseDocumentService";
 
 import { issuerCompanies } from "../mocks/issuerCompanies";
 import { projects } from "../mocks/projects";
+import { costTypes } from "../mocks/costTypes";
 
 import {
   getDocumentStatusLabel,
@@ -32,9 +34,7 @@ import {
 
 export default function DocumentDetail() {
   const { id } = useParams();
-
   const navigate = useNavigate();
-
   const location = useLocation();
 
   const [document, setDocument] =
@@ -43,55 +43,66 @@ export default function DocumentDetail() {
   useEffect(() => {
     async function loadDocument() {
       const documentId = Number(id);
+      const response = await getDocuments();
 
-      const response =
-        await getDocuments();
-
-      const selectedDocument =
-        response.find(
-          document =>
-            document.id === documentId
-        );
-
-      setDocument(
-        selectedDocument ?? null
+      const selectedDocument = response.find(
+        item => item.id === documentId
       );
+
+      setDocument(selectedDocument ?? null);
     }
 
     loadDocument();
   }, [id]);
 
   if (!document) {
-    return (
-      <Typography>
-        Documento no encontrado
-      </Typography>
-    );
+    return <Typography>Documento no encontrado</Typography>;
   }
 
-  const issuerCompany =
-    issuerCompanies.find(
-      company =>
-        company.id ===
-        document.issuerCompanyId
-    );
+  const issuerCompany = issuerCompanies.find(
+    company => company.id === document.issuerCompanyId
+  );
 
-  const project =
-    projects.find(
-      project =>
-        project.id ===
-        document.projectId
-    );
+  const project = projects.find(
+    item => item.id === document.projectId
+  );
+
+  // costTypeId representa el nivel más específico asignado.
+  const selectedCostType = costTypes.find(
+    item => item.id === document.costTypeId
+  );
+
+  const costTypeLevel3 =
+    selectedCostType?.level === 3
+      ? selectedCostType
+      : undefined;
+
+  const costTypeLevel2 = costTypeLevel3
+    ? costTypes.find(
+        item =>
+          item.id === costTypeLevel3.parentId &&
+          item.level === 2
+      )
+    : selectedCostType?.level === 2
+      ? selectedCostType
+      : undefined;
+
+  const costTypeLevel1 = costTypeLevel2
+    ? costTypes.find(
+        item =>
+          item.id === costTypeLevel2.parentId &&
+          item.level === 1
+      )
+    : selectedCostType?.level === 1
+      ? selectedCostType
+      : undefined;
 
   const canEdit =
-    document.status ===
-      DocumentStatus.Pending ||
-    document.status ===
-      DocumentStatus.Rejected;
+    document.status === DocumentStatus.Pending ||
+    document.status === DocumentStatus.Rejected;
 
   const handleBack = () => {
-    const returnTo =
-      location.state?.returnTo;
+    const returnTo = location.state?.returnTo;
 
     if (returnTo) {
       navigate(returnTo);
@@ -100,6 +111,10 @@ export default function DocumentDetail() {
 
     navigate("/documents");
   };
+
+  const formatCostType = (
+    item: typeof selectedCostType
+  ) => item ? `${item.code} - ${item.description}` : "Sin asignar";
 
   return (
     <>
@@ -115,7 +130,8 @@ export default function DocumentDetail() {
           sx={{
             display: "flex",
             alignItems: "center",
-            gap: 1
+            gap: 1,
+            flexWrap: "wrap"
           }}
         >
           <IconButton
@@ -137,15 +153,11 @@ export default function DocumentDetail() {
             <Button
               variant="outlined"
               onClick={() =>
-                navigate(
-                  `/documents/${document.id}/edit`,
-                  {
-                    state: {
-                      returnTo:
-                        location.state?.returnTo
-                    }
+                navigate(`/documents/${document.id}/edit`, {
+                  state: {
+                    returnTo: location.state?.returnTo
                   }
-                )
+                })
               }
             >
               Editar
@@ -154,26 +166,13 @@ export default function DocumentDetail() {
         </Box>
 
         <Chip
-          label={getDocumentStatusLabel(
-            document.status
-          )}
-          color={getDocumentStatusColor(
-            document.status
-          )}
+          label={getDocumentStatusLabel(document.status)}
+          color={getDocumentStatusColor(document.status)}
         />
       </Box>
 
-      <Paper
-        sx={{
-          p: 3
-        }}
-      >
-        <Typography
-          variant="h6"
-          sx={{
-            mb: 3
-          }}
-        >
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="h6" sx={{ mb: 3 }}>
           Información del documento
         </Typography>
 
@@ -188,138 +187,123 @@ export default function DocumentDetail() {
           }}
         >
           <Box>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-            >
+            <Typography variant="body2" color="text.secondary">
               Número de documento
             </Typography>
-
-            <Typography>
-              {document.documentNumber ?? "-"}
-            </Typography>
+            <Typography>{document.documentNumber ?? "-"}</Typography>
           </Box>
 
           <Box>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-            >
+            <Typography variant="body2" color="text.secondary">
               Fecha de emisión
             </Typography>
-
-            <Typography>
-              {document.issueDate ?? "-"}
-            </Typography>
+            <Typography>{document.issueDate ?? "-"}</Typography>
           </Box>
 
           <Box>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-            >
+            <Typography variant="body2" color="text.secondary">
               Fecha de envío
             </Typography>
-
             <Typography>
               {document.sentAt
-                ? new Date(
-                    document.sentAt
-                  ).toLocaleString("es-CL")
+                ? new Date(document.sentAt).toLocaleString("es-CL")
                 : "-"}
             </Typography>
           </Box>
 
           <Box>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-            >
+            <Typography variant="body2" color="text.secondary">
               Total
             </Typography>
-
             <Typography>
-              $
-              {(document.total ?? 0)
-                .toLocaleString("es-CL")}
+              ${(document.total ?? 0).toLocaleString("es-CL")}
             </Typography>
           </Box>
 
           <Box>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-            >
+            <Typography variant="body2" color="text.secondary">
               Teléfono de origen
             </Typography>
-
-            <Typography>
-              {document.sourcePhone}
-            </Typography>
+            <Typography>{document.sourcePhone ?? "-"}</Typography>
           </Box>
 
           <Box>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-            >
+            <Typography variant="body2" color="text.secondary">
               Empresa emisora
             </Typography>
-
-            <Typography>
-              {issuerCompany?.name ??
-                "Sin asignar"}
-            </Typography>
+            <Typography>{issuerCompany?.name ?? "Sin asignar"}</Typography>
           </Box>
 
           <Box>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-            >
+            <Typography variant="body2" color="text.secondary">
               RUT empresa emisora
             </Typography>
-
             <Typography>
-              {document.issuerCompanyRut ??
-                "Sin registrar"}
+              {document.issuerCompanyRut ?? "Sin registrar"}
             </Typography>
           </Box>
 
           <Box>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-            >
+            <Typography variant="body2" color="text.secondary">
               Proyecto
             </Typography>
-
-            <Typography>
-              {project?.name ??
-                "Sin proyecto"}
-            </Typography>
+            <Typography>{project?.name ?? "Sin proyecto"}</Typography>
           </Box>
 
           <Box>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-            >
+            <Typography variant="body2" color="text.secondary">
               Estado
             </Typography>
-
             <Chip
-              label={getDocumentStatusLabel(
-                document.status
-              )}
-              color={getDocumentStatusColor(
-                document.status
-              )}
+              label={getDocumentStatusLabel(document.status)}
+              color={getDocumentStatusColor(document.status)}
               size="small"
-              sx={{
-                mt: 0.5
-              }}
+              sx={{ mt: 0.5 }}
             />
+          </Box>
+        </Box>
+
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h6" sx={{ mb: 3 }}>
+            Tipo de costo
+          </Typography>
+
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                md: "repeat(3, 1fr)"
+              },
+              gap: 3
+            }}
+          >
+            <Box>
+              <Typography variant="body2" color="text.secondary">
+                Tipo de costo - Nivel 1
+              </Typography>
+              <Typography>
+                {formatCostType(costTypeLevel1)}
+              </Typography>
+            </Box>
+
+            <Box>
+              <Typography variant="body2" color="text.secondary">
+                Tipo de costo - Nivel 2
+              </Typography>
+              <Typography>
+                {formatCostType(costTypeLevel2)}
+              </Typography>
+            </Box>
+
+            <Box>
+              <Typography variant="body2" color="text.secondary">
+                Tipo de costo - Nivel 3
+              </Typography>
+              <Typography>
+                {formatCostType(costTypeLevel3)}
+              </Typography>
+            </Box>
           </Box>
         </Box>
       </Paper>

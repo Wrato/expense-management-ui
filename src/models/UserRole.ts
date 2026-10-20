@@ -1,7 +1,8 @@
 export const UserRole = {
   Admin: "ADMIN",
   Accountant: "ACCOUNTANT",
-  Employee: "EMPLOYEE"
+  Employee: "EMPLOYEE",
+  Approver: "APPROVER"
 } as const;
 
 export type UserRole =

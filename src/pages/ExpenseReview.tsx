@@ -9,19 +9,21 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow
+  TableRow,
+  IconButton,
+  Tooltip
 } from "@mui/material";
 
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CheckIcon from "@mui/icons-material/Check";
 import BlockIcon from "@mui/icons-material/Block";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import type { ExpenseClaim } from "../models/ExpenseClaim";
 import type { ExpenseDocument } from "../models/ExpenseDocument";
-import type { Project } from "../models/Project";
 
 import {
   getExpenseClaims,
@@ -30,10 +32,12 @@ import {
 } from "../services/expenseClaimService";
 
 import { getDocuments } from "../services/expenseDocumentService";
-import { getProjects } from "../services/projectService";
 
 import { useAuth } from "../hooks/useAuth";
-import { UserRole } from "../models/UserRole";
+
+import {
+  canApproveExpenseClaim
+} from "../utils/permissions";
 
 import {
   getExpenseClaimStatusColor,
@@ -56,14 +60,15 @@ export default function ExpenseReview() {
   const [documents, setDocuments] =
     useState<ExpenseDocument[]>([]);
 
-  const [projects, setProjects] =
-    useState<Project[]>([]);
-
   const [rejectedDocumentIds, setRejectedDocumentIds] =
     useState<number[]>([]);
 
   const [saving, setSaving] =
     useState(false);
+
+  const canApprove =
+    user !== null &&
+    canApproveExpenseClaim(user.role);
 
   useEffect(() => {
     async function loadData() {
@@ -75,9 +80,6 @@ export default function ExpenseReview() {
       const documentsResponse =
         await getDocuments();
 
-      const projectsResponse =
-        await getProjects();
-
       const selectedClaim =
         claimsResponse.find(
           claim => claim.id === claimId
@@ -88,7 +90,6 @@ export default function ExpenseReview() {
       }
 
       setClaim(selectedClaim);
-      setProjects(projectsResponse);
 
       const claimDocuments =
         documentsResponse.filter(
@@ -103,6 +104,36 @@ export default function ExpenseReview() {
     loadData();
   }, [id]);
 
+  /*
+   * La pantalla de revisión solamente puede
+   * ser utilizada por Admin y Approver.
+   */
+  if (!user || !canApprove) {
+    return (
+      <>
+        <Typography variant="h5" sx={{ mb: 2 }}>
+          Acceso no autorizado
+        </Typography>
+
+        <Typography
+          color="text.secondary"
+          sx={{ mb: 3 }}
+        >
+          No tienes permisos para revisar o aprobar
+          rendiciones.
+        </Typography>
+
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate("/expenses")}
+        >
+          Volver a rendiciones
+        </Button>
+      </>
+    );
+  }
+
   if (!claim) {
     return (
       <Typography>
@@ -111,10 +142,40 @@ export default function ExpenseReview() {
     );
   }
 
-  const project =
-    projects.find(
-      project => project.id === claim.projectId
+  /*
+   * La revisión solamente tiene sentido para
+   * rendiciones enviadas a revisión.
+   */
+  if (
+    claim.status !==
+    "SUBMITTED"
+  ) {
+    return (
+      <>
+        <Typography variant="h5" sx={{ mb: 2 }}>
+          Rendición no disponible para revisión
+        </Typography>
+
+        <Typography
+          color="text.secondary"
+          sx={{ mb: 3 }}
+        >
+          Esta rendición no se encuentra actualmente
+          en estado de revisión.
+        </Typography>
+
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBackIcon />}
+          onClick={() =>
+            navigate(`/expenses/${claim.id}`)
+          }
+        >
+          Volver
+        </Button>
+      </>
     );
+  }
 
   const total =
     documents.reduce(
@@ -176,10 +237,7 @@ export default function ExpenseReview() {
       return;
     }
 
-    if (
-      user.role !== UserRole.Admin &&
-      user.role !== UserRole.Accountant
-    ) {
+    if (!canApproveExpenseClaim(user.role)) {
       alert(
         "No tienes permisos para devolver rendiciones"
       );
@@ -220,12 +278,9 @@ export default function ExpenseReview() {
       return;
     }
 
-    if (
-      user.role !== UserRole.Admin &&
-      user.role !== UserRole.Accountant
-    ) {
+    if (!canApproveExpenseClaim(user.role)) {
       alert(
-        "No tienes permisos para revisar rendiciones"
+        "No tienes permisos para aprobar rendiciones"
       );
       return;
     }
@@ -256,6 +311,7 @@ export default function ExpenseReview() {
       );
     } catch (error) {
       console.error(error);
+
       alert(
         "No fue posible procesar la revisión."
       );
@@ -266,7 +322,6 @@ export default function ExpenseReview() {
 
   return (
     <>
-      {/* HEADER */}
       <Box
         sx={{
           display: "flex",
@@ -275,23 +330,30 @@ export default function ExpenseReview() {
           mb: 3
         }}
       >
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() =>
-            navigate(
-              `/expenses/${claim.id}`
-            )
-          }
-        >
-          Volver
-        </Button>
+        
+
+        <Tooltip title="Volver al detalle de la rendición">
+          <IconButton
+            onClick={() =>
+              navigate(`/expenses/${claim.id}`)
+            }
+            aria-label="Volver al detalle de la rendición"
+            sx={{
+              border: 1,
+              borderColor: "divider"
+            }}
+          >
+            <ArrowBackIcon />
+          </IconButton>
+        </Tooltip>
+
+
 
         <Typography variant="h4">
           Revisar Rendición
         </Typography>
       </Box>
 
-      {/* INFORMACIÓN DE LA RENDICIÓN */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography
           variant="h6"
@@ -305,7 +367,7 @@ export default function ExpenseReview() {
             display: "grid",
             gridTemplateColumns: {
               xs: "1fr",
-              md: "repeat(4, 1fr)"
+              md: "repeat(3, 1fr)"
             },
             gap: 3
           }}
@@ -345,20 +407,6 @@ export default function ExpenseReview() {
               variant="body2"
               color="text.secondary"
             >
-              Proyecto
-            </Typography>
-
-            <Typography>
-              {project?.name ??
-                "Sin proyecto"}
-            </Typography>
-          </Box>
-
-          <Box>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-            >
               Estado
             </Typography>
 
@@ -376,7 +424,6 @@ export default function ExpenseReview() {
         </Box>
       </Paper>
 
-      {/* DOCUMENTOS */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography
           variant="h6"
@@ -468,13 +515,11 @@ export default function ExpenseReview() {
                     </TableCell>
 
                     <TableCell>
-                      {document.issueDate ??
-                        "-"}
+                      {document.issueDate ?? "-"}
                     </TableCell>
 
                     <TableCell>
-                      {document.documentNumber ??
-                        "-"}
+                      {document.documentNumber ?? "-"}
                     </TableCell>
 
                     <TableCell align="right">
@@ -519,54 +564,58 @@ export default function ExpenseReview() {
                     </TableCell>
 
                     <TableCell align="center">
+                      
                       <Box
                         sx={{
                           display: "flex",
-                          justifyContent:
-                            "center",
-                          gap: 1
+                          justifyContent: "center",
+                          alignItems: "center",
+                          gap: 0.5
                         }}
                       >
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() =>
-                            navigate(
-                              `/documents/${document.id}`,
-                              {
-                                state: {
-                                  returnTo:
-                                    `/expenses/${claim.id}/review`
+                        <Tooltip title="Ver documento">
+                          <IconButton
+                            size="small"
+                            onClick={() =>
+                              navigate(
+                                `/documents/${document.id}`,
+                                {
+                                  state: {
+                                    returnTo:
+                                      `/expenses/${claim.id}/review`
+                                  }
                                 }
-                              }
-                            )
-                          }
-                        >
-                          Ver
-                        </Button>
+                              )
+                            }
+                            sx={{ color: "text.secondary" }}
+                          >
+                            <VisibilityIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
 
-                        <Button
-                          size="small"
-                          variant={
+                        <Tooltip
+                          title={
                             isRejected
-                              ? "contained"
-                              : "outlined"
-                          }
-                          color="error"
-                          startIcon={
-                            <BlockIcon />
-                          }
-                          onClick={() =>
-                            handleToggleRejected(
-                              document.id
-                            )
+                              ? "Desmarcar rechazo"
+                              : "Rechazar documento"
                           }
                         >
-                          {isRejected
-                            ? "Desmarcar"
-                            : "Rechazar"}
-                        </Button>
+                          <IconButton
+                            size="small"
+                            onClick={() =>
+                              handleToggleRejected(document.id)
+                            }
+                            sx={{ color: "text.secondary" }}
+                          >
+                            {isRejected ? (
+                              <CheckIcon fontSize="small" />
+                            ) : (
+                              <BlockIcon fontSize="small" />
+                            )}
+                          </IconButton>
+                        </Tooltip>
                       </Box>
+
                     </TableCell>
                   </TableRow>
                 );
@@ -576,7 +625,6 @@ export default function ExpenseReview() {
         </TableContainer>
       </Paper>
 
-      {/* TOTALES Y PROCESAR */}
       <Paper sx={{ p: 3 }}>
         <Box
           sx={{
@@ -598,9 +646,7 @@ export default function ExpenseReview() {
             </Typography>
 
             <Typography variant="h6">
-              ${total.toLocaleString(
-                "es-CL"
-              )}
+              ${total.toLocaleString("es-CL")}
             </Typography>
           </Box>
 
@@ -613,9 +659,7 @@ export default function ExpenseReview() {
             </Typography>
 
             <Typography variant="h6">
-              ${approvedTotal.toLocaleString(
-                "es-CL"
-              )}
+              ${approvedTotal.toLocaleString("es-CL")}
             </Typography>
           </Box>
 
@@ -628,9 +672,7 @@ export default function ExpenseReview() {
             </Typography>
 
             <Typography variant="h6">
-              ${rejectedTotal.toLocaleString(
-                "es-CL"
-              )}
+              ${rejectedTotal.toLocaleString("es-CL")}
             </Typography>
           </Box>
         </Box>
