@@ -8,6 +8,7 @@ export interface ExpenseDocument {
   projectId: number | null;
   employeeId: number | null;
   expenseClaimId: number | null;
+  costTypeId: number | null;
   issueDate: string | null;
   sentAt: string;
   total: number | null;

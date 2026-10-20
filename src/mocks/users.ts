@@ -37,5 +37,14 @@ export const users: User[] = [
     role: UserRole.Accountant,
     companyId: 1,
     phone: null
+  },
+  {
+    id: 5,
+    username: "aprobador",
+    password: "1234",
+    name: "Carlos Aprobador",
+    role: UserRole.Approver,
+    companyId: 1,
+    phone: null
   }
 ];

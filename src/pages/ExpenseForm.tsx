@@ -3,14 +3,18 @@ import {
   Typography,
   Button,
   Paper,
-  FormControlLabel,
-  Checkbox,
-  Divider,
   TextField,
   FormControl,
   InputLabel,
   MenuItem,
   Select,
+  Checkbox,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Chip
 } from "@mui/material";
 
@@ -22,12 +26,16 @@ import { DocumentStatus } from "../models/DocumentStatus";
 import { UserRole } from "../models/UserRole";
 
 import { users } from "../mocks/users";
-import { projects } from "../mocks/projects";
+import { issuerCompanies } from "../mocks/issuerCompanies";
 
 import { getDocuments } from "../services/expenseDocumentService";
 import { createExpenseClaim } from "../services/expenseClaimService";
 
 import { useAuth } from "../hooks/useAuth";
+
+import {
+  canCreateExpenseClaim
+} from "../utils/permissions";
 
 import {
   getDocumentStatusColor,
@@ -38,6 +46,10 @@ export default function ExpenseForm() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const canCreate =
+    user !== null &&
+    canCreateExpenseClaim(user.role);
+
   const [title, setTitle] = useState("");
 
   const [selectedEmployeeId, setSelectedEmployeeId] =
@@ -46,9 +58,6 @@ export default function ExpenseForm() {
         ? user.id
         : null
     );
-
-  const [selectedProjectId, setSelectedProjectId] =
-    useState<number | null>(null);
 
   const [documents, setDocuments] =
     useState<ExpenseDocument[]>([]);
@@ -73,7 +82,7 @@ export default function ExpenseForm() {
 
   useEffect(() => {
     async function loadDocuments() {
-      if (!selectedEmployeeId || !selectedProjectId) {
+      if (!selectedEmployeeId) {
         setDocuments([]);
         return;
       }
@@ -83,7 +92,6 @@ export default function ExpenseForm() {
       const availableDocuments = response.filter(
         document =>
           document.employeeId === selectedEmployeeId &&
-          document.projectId === selectedProjectId &&
           document.expenseClaimId === null &&
           document.status === DocumentStatus.Pending
       );
@@ -92,22 +100,24 @@ export default function ExpenseForm() {
     }
 
     loadDocuments();
-  }, [selectedEmployeeId, selectedProjectId]);
+  }, [selectedEmployeeId]);
+
+  if (!user || !canCreate) {
+    return (
+      <Typography>
+        No tienes permisos para crear una rendición.
+      </Typography>
+    );
+  }
 
   const handleEmployeeChange = (employeeId: number) => {
     setSelectedEmployeeId(employeeId);
-    setSelectedProjectId(null);
     setSelectedDocuments([]);
     setDocuments([]);
   };
 
   const selectedEmployee = users.find(
     employee => employee.id === selectedEmployeeId
-  );
-
-  const availableProjects = projects.filter(
-    project =>
-      project.companyId === selectedEmployee?.companyId
   );
 
   const handleToggleDocument = (documentId: number) => {
@@ -119,7 +129,6 @@ export default function ExpenseForm() {
       return;
     }
 
-    // Seguridad adicional en la interfaz.
     if (document.status !== DocumentStatus.Pending) {
       return;
     }
@@ -144,10 +153,6 @@ export default function ExpenseForm() {
     );
 
   const handleCreateExpense = async () => {
-    if (!user) {
-      return;
-    }
-
     if (!title.trim()) {
       alert("Debes ingresar un título para la rendición");
       return;
@@ -155,11 +160,6 @@ export default function ExpenseForm() {
 
     if (!selectedEmployeeId) {
       alert("Debes seleccionar un empleado");
-      return;
-    }
-
-    if (!selectedProjectId) {
-      alert("Debes seleccionar un proyecto");
       return;
     }
 
@@ -173,7 +173,7 @@ export default function ExpenseForm() {
         title: title.trim(),
         employeeId: selectedEmployeeId,
         createdBy: user.id,
-        projectId: selectedProjectId,
+        projectId: null,
         documentIds: selectedDocuments
       });
 
@@ -221,68 +221,33 @@ export default function ExpenseForm() {
         />
       )}
 
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: {
-            xs: "1fr",
-            md: "1fr 1fr"
-          },
-          gap: 2,
-          mb: 3
-        }}
-      >
-        {!isEmployee && (
-          <FormControl fullWidth>
-            <InputLabel>Empleado</InputLabel>
-
-            <Select
-              value={selectedEmployeeId ?? ""}
-              label="Empleado"
-              onChange={event =>
-                handleEmployeeChange(
-                  Number(event.target.value)
-                )
-              }
-            >
-              {employees.map(employee => (
-                <MenuItem
-                  key={employee.id}
-                  value={employee.id}
-                >
-                  {employee.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        )}
-
-        <FormControl fullWidth>
-          <InputLabel>Proyecto</InputLabel>
+      {!isEmployee && (
+        <FormControl
+          fullWidth
+          sx={{ mb: 3 }}
+        >
+          <InputLabel>Empleado</InputLabel>
 
           <Select
-            value={selectedProjectId ?? ""}
-            label="Proyecto"
-            disabled={!selectedEmployeeId}
-            onChange={event => {
-              setSelectedProjectId(
+            value={selectedEmployeeId ?? ""}
+            label="Empleado"
+            onChange={event =>
+              handleEmployeeChange(
                 Number(event.target.value)
-              );
-
-              setSelectedDocuments([]);
-            }}
+              )
+            }
           >
-            {availableProjects.map(project => (
+            {employees.map(employee => (
               <MenuItem
-                key={project.id}
-                value={project.id}
+                key={employee.id}
+                value={employee.id}
               >
-                {project.name}
+                {employee.name}
               </MenuItem>
             ))}
           </Select>
         </FormControl>
-      </Box>
+      )}
 
       <Paper sx={{ p: 3 }}>
         <Typography
@@ -298,64 +263,113 @@ export default function ExpenseForm() {
             para esta rendición.
           </Typography>
         ) : (
-          documents.map(document => (
-            <Box key={document.id}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={selectedDocuments.includes(
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell padding="checkbox" />
+
+                  <TableCell>
+                    Documento
+                  </TableCell>
+
+                  <TableCell>
+                    Fecha
+                  </TableCell>
+
+                  <TableCell>
+                    Empresa emisora
+                  </TableCell>
+
+                  <TableCell align="right">
+                    Total
+                  </TableCell>
+
+                  <TableCell>
+                    Estado
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+
+              <TableBody>
+                {documents.map(document => {
+                  const issuerCompany =
+                    issuerCompanies.find(
+                      company =>
+                        company.id ===
+                        document.issuerCompanyId
+                    );
+
+                  const isSelected =
+                    selectedDocuments.includes(
                       document.id
-                    )}
-                    onChange={() =>
-                      handleToggleDocument(
-                        document.id
-                      )
-                    }
-                  />
-                }
-                label={
-                  <Box>
-                    <Box
+                    );
+
+                  return (
+                    <TableRow
+                      key={document.id}
+                      hover
+                      selected={isSelected}
+                      onClick={() =>
+                        handleToggleDocument(
+                          document.id
+                        )
+                      }
                       sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1
+                        cursor: "pointer"
                       }}
                     >
-                      <Typography>
-                        Documento{" "}
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          checked={isSelected}
+                          onChange={() =>
+                            handleToggleDocument(
+                              document.id
+                            )
+                          }
+                          onClick={event =>
+                            event.stopPropagation()
+                          }
+                        />
+                      </TableCell>
+
+                      <TableCell>
                         {document.documentNumber ??
                           document.id}
-                      </Typography>
+                      </TableCell>
 
-                      <Chip
-                        label={getDocumentStatusLabel(
-                          document.status
+                      <TableCell>
+                        {document.issueDate ?? "-"}
+                      </TableCell>
+
+                      <TableCell>
+                        {issuerCompany?.name ?? "-"}
+                      </TableCell>
+
+                      <TableCell align="right">
+                        $
+                        {(document.total ?? 0).toLocaleString(
+                          "es-CL"
                         )}
-                        size="small"
-                        color={getDocumentStatusColor(
-                          document.status
-                        )}
-                      />
-                    </Box>
-                  </Box>
-                }
-              />
+                      </TableCell>
 
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ ml: 4 }}
-              >
-                Fecha: {document.issueDate ?? "-"} |
-                Total: $
-                {(document.total ?? 0)
-                  .toLocaleString("es-CL")}
-              </Typography>
-
-              <Divider sx={{ my: 1 }} />
-            </Box>
-          ))
+                      <TableCell>
+                        <Chip
+                          label={getDocumentStatusLabel(
+                            document.status
+                          )}
+                          color={getDocumentStatusColor(
+                            document.status
+                          )}
+                          size="small"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
         )}
 
         <Box

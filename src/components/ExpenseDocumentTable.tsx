@@ -19,217 +19,171 @@ import { useNavigate } from "react-router-dom";
 import type { ExpenseDocument } from "../models/ExpenseDocument";
 import { DocumentStatus } from "../models/DocumentStatus";
 
+import { users } from "../mocks/users";
 import { issuerCompanies } from "../mocks/issuerCompanies";
 import { expenseClaims } from "../mocks/expenseClaims";
-import { users } from "../mocks/users";
-import { projects } from "../mocks/projects";
 
 import {
-  getDocumentStatusLabel,
-  getDocumentStatusColor
+  getDocumentStatusColor,
+  getDocumentStatusLabel
 } from "../utils/documentStatusUtils";
 
-interface DocumentTableProps {
+interface Props {
   documents: ExpenseDocument[];
   showEmployee?: boolean;
 }
 
-export default function DocumentTable({
+export default function ExpenseDocumentTable({
   documents,
   showEmployee = true
-}: DocumentTableProps) {
+}: Props) {
   const navigate = useNavigate();
 
   return (
-    <TableContainer
-      component={Paper}
-      sx={{
-        borderRadius: 2,
-        width: "100%",
-        overflowX: "auto"
-      }}
-    >
-      <Table
-        sx={{
-          width: "100%"
-        }}
-      >
+    <TableContainer component={Paper}>
+      <Table>
         <TableHead>
           <TableRow>
-            <TableCell sx={{ fontWeight: "bold", width: 70 }}>
-              ID
-            </TableCell>
-
-            <TableCell sx={{ fontWeight: "bold", width: 120 }}>
-              Fecha emisión
-            </TableCell>
-
-            <TableCell sx={{ fontWeight: "bold", width: 120 }}>
-              N° documento
-            </TableCell>
+            <TableCell>ID</TableCell>
 
             {showEmployee && (
-              <TableCell sx={{ fontWeight: "bold" }}>
-                Trabajador
-              </TableCell>
+              <TableCell>Empleado</TableCell>
             )}
 
-            <TableCell sx={{ fontWeight: "bold" }}>
-              Empresa emisora
-            </TableCell>
-
-            <TableCell sx={{ fontWeight: "bold" }}>
-              Proyecto
-            </TableCell>
-
-            <TableCell
-              sx={{ fontWeight: "bold" }}
-              align="right"
-            >
-              Total
-            </TableCell>
-
-            <TableCell sx={{ fontWeight: "bold" }}>
-              Estado
-            </TableCell>
-
-            <TableCell sx={{ fontWeight: "bold" }}>
-              Rendición
-            </TableCell>
-
-            <TableCell sx={{ fontWeight: "bold" }}>
+            <TableCell>Empresa emisora</TableCell>
+            <TableCell>Fecha emisión</TableCell>
+            <TableCell>N° documento</TableCell>
+            <TableCell>Rendición</TableCell>
+            <TableCell>Total</TableCell>
+            <TableCell>Estado</TableCell>
+            <TableCell align="center">
               Acciones
             </TableCell>
           </TableRow>
         </TableHead>
 
         <TableBody>
-          {documents.map(document => {
-            const company = issuerCompanies.find(
-              company =>
-                company.id === document.issuerCompanyId
-            );
-
-            const expenseClaim = expenseClaims.find(
-              claim =>
-                claim.id === document.expenseClaimId
-            );
-
-            const employee = users.find(
-              user =>
-                user.id === document.employeeId
-            );
-
-            const project = projects.find(
-              project =>
-                project.id === document.projectId
-            );
-
-            const canEdit =
-              document.status !==
-              DocumentStatus.Approved;
-
-            return (
-              <TableRow
-                key={document.id}
-                hover
-                onClick={() =>
-                  navigate(
-                    `/documents/${document.id}`
-                  )
-                }
-                sx={{
-                  cursor: "pointer"
-                }}
+          {documents.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={showEmployee ? 9 : 8}
+                align="center"
               >
-                <TableCell>
-                  {document.id}
-                </TableCell>
+                No existen documentos para mostrar.
+              </TableCell>
+            </TableRow>
+          ) : (
+            documents.map(document => {
+              const employee = users.find(
+                user =>
+                  user.id === document.employeeId
+              );
 
-                <TableCell>
-                  {document.issueDate ?? "-"}
-                </TableCell>
+              const issuerCompany =
+                issuerCompanies.find(
+                  company =>
+                    company.id ===
+                    document.issuerCompanyId
+                );
 
-                <TableCell>
-                  {document.documentNumber ?? "-"}
-                </TableCell>
+              const expenseClaim =
+                expenseClaims.find(
+                  claim =>
+                    claim.id ===
+                    document.expenseClaimId
+                );
 
-                {showEmployee && (
+              const canEdit =
+                document.status !==
+                DocumentStatus.Approved;
+
+              return (
+                <TableRow
+                  key={document.id}
+                  hover
+                >
                   <TableCell>
-                    {employee?.name ?? "Sin asignar"}
+                    {document.id}
                   </TableCell>
-                )}
 
-                <TableCell>
-                  {company?.name ?? "Sin asignar"}
-                </TableCell>
+                  {showEmployee && (
+                    <TableCell>
+                      {employee?.name ?? "-"}
+                    </TableCell>
+                  )}
 
-                <TableCell>
-                  {project?.name ?? "Sin proyecto"}
-                </TableCell>
+                  <TableCell>
+                    {issuerCompany?.name ?? "-"}
+                  </TableCell>
 
-                <TableCell align="right">
-                  {document.total != null
-                    ? `$${document.total.toLocaleString(
-                        "es-CL"
-                      )}`
-                    : "-"}
-                </TableCell>
+                  <TableCell>
+                    {document.issueDate ?? "-"}
+                  </TableCell>
 
-                <TableCell>
-                  <Chip
-                    label={getDocumentStatusLabel(
-                      document.status
+                  <TableCell>
+                    {document.documentNumber ?? "-"}
+                  </TableCell>
+
+                  <TableCell>
+                    {expenseClaim?.title ?? "-"}
+                  </TableCell>
+
+                  <TableCell>
+                    $
+                    {(document.total ?? 0).toLocaleString(
+                      "es-CL"
                     )}
-                    color={getDocumentStatusColor(
-                      document.status
-                    )}
-                    size="small"
-                  />
-                </TableCell>
+                  </TableCell>
 
-                <TableCell>
-                  {expenseClaim?.title ?? "-"}
-                </TableCell>
-
-                <TableCell align="center">
-                  <Tooltip title="Ver detalle">
-                    <IconButton
+                  <TableCell>
+                    <Chip
+                      label={getDocumentStatusLabel(
+                        document.status
+                      )}
+                      color={getDocumentStatusColor(
+                        document.status
+                      )}
                       size="small"
-                      aria-label="Ver detalle"
-                      onClick={event => {
-                        event.stopPropagation();
+                    />
+                  </TableCell>
 
-                        navigate(
-                          `/documents/${document.id}`
-                        );
-                      }}
-                    >
-                      <VisibilityIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-
-                  {canEdit && (
-                    <Tooltip title="Editar">
+                  <TableCell align="center">
+                    <Tooltip title="Ver detalle">
                       <IconButton
                         size="small"
-                        aria-label="Editar"
+                        aria-label="Ver detalle"
                         onClick={event => {
                           event.stopPropagation();
-
                           navigate(
-                            `/documents/${document.id}/edit`
+                            `/documents/${document.id}`
                           );
                         }}
                       >
-                        <EditIcon fontSize="small" />
+                        <VisibilityIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                  )}
-                </TableCell>
-              </TableRow>
-            );
-          })}
+
+                    {canEdit && (
+                      <Tooltip title="Editar">
+                        <IconButton
+                          size="small"
+                          aria-label="Editar"
+                          onClick={event => {
+                            event.stopPropagation();
+                            navigate(
+                              `/documents/${document.id}/edit`
+                            );
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          )}
         </TableBody>
       </Table>
     </TableContainer>

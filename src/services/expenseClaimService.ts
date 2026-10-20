@@ -11,6 +11,10 @@ import { expenseClaims } from "../mocks/expenseClaims";
 import { expenseDocuments } from "../mocks/expenseDocuments";
 import { expenseClaimDocuments } from "../mocks/expenseClaimDocuments";
 
+import {
+  canCreateExpenseClaim
+} from "../utils/permissions";
+
 
 interface CreateExpenseClaimRequest {
   employeeId: number;
@@ -39,6 +43,97 @@ export async function getExpenseClaims(): Promise<ExpenseClaim[]> {
 export async function createExpenseClaim(
   request: CreateExpenseClaimRequest
 ): Promise<ExpenseClaim> {
+
+  /*
+   * Buscamos al usuario que está creando
+   * la rendición.
+   */
+  const creator = users.find(
+    user => user.id === request.createdBy
+  );
+
+  if (!creator) {
+    throw new Error(
+      "El usuario que crea la rendición no existe"
+    );
+  }
+
+
+  /*
+   * Verificamos que el rol pueda crear
+   * una rendición.
+   */
+  if (!canCreateExpenseClaim(creator.role)) {
+    throw new Error(
+      "No tienes permisos para crear una rendición"
+    );
+  }
+
+
+  /*
+   * Buscamos al empleado asociado
+   * a la rendición.
+   */
+  const employee = users.find(
+    user => user.id === request.employeeId
+  );
+
+  if (!employee) {
+    throw new Error(
+      "El empleado seleccionado no existe"
+    );
+  }
+
+
+  /*
+   * La rendición debe estar asociada
+   * a un usuario con rol Employee.
+   */
+  if (employee.role !== UserRole.Employee) {
+    throw new Error(
+      "La rendición debe estar asociada a un empleado"
+    );
+  }
+
+
+  /*
+   * Un empleado solo puede crear
+   * sus propias rendiciones.
+   */
+  if (creator.role === UserRole.Employee) {
+
+    if (creator.id !== employee.id) {
+      throw new Error(
+        "Un empleado solo puede crear rendiciones propias"
+      );
+    }
+
+  }
+
+
+  /*
+   * Un administrativo solo puede crear
+   * rendiciones para empleados de su empresa.
+   */
+  if (creator.role === UserRole.Accountant) {
+
+    if (
+      creator.companyId === null ||
+      employee.companyId !== creator.companyId
+    ) {
+      throw new Error(
+        "No tienes permisos para crear una rendición para este empleado"
+      );
+    }
+
+  }
+
+
+  /*
+   * Admin puede crear rendiciones
+   * para cualquier empleado.
+   */
+
 
   /*
    * Buscamos todos los documentos seleccionados.
@@ -82,13 +177,33 @@ export async function createExpenseClaim(
 
 
   /*
+   * Los documentos deben pertenecer
+   * al empleado seleccionado.
+   */
+  const documentFromAnotherEmployee =
+    selectedDocuments.find(
+      document =>
+        document.employeeId !== request.employeeId
+    );
+
+  if (documentFromAnotherEmployee) {
+
+    throw new Error(
+      "Uno o más documentos no pertenecen al empleado seleccionado"
+    );
+
+  }
+
+
+  /*
    * Los documentos no pueden pertenecer
    * a otra rendición.
    */
-  const alreadyAssignedDocument = selectedDocuments.find(
-    document =>
-      document.expenseClaimId !== null
-  );
+  const alreadyAssignedDocument =
+    selectedDocuments.find(
+      document =>
+        document.expenseClaimId !== null
+    );
 
   if (alreadyAssignedDocument) {
 
@@ -105,7 +220,9 @@ export async function createExpenseClaim(
   const newId =
     Math.max(
       0,
-      ...expenseClaims.map(claim => claim.id)
+      ...expenseClaims.map(
+        claim => claim.id
+      )
     ) + 1;
 
 
@@ -124,9 +241,11 @@ export async function createExpenseClaim(
 
     createdBy: request.createdBy,
 
-    createdAt: new Date().toISOString(),
+    createdAt:
+      new Date().toISOString(),
 
-    status: ExpenseClaimStatus.Draft,
+    status:
+      ExpenseClaimStatus.Draft,
 
     reviewedBy: null,
 
@@ -150,7 +269,8 @@ export async function createExpenseClaim(
       newClaim.id;
 
 
-    const newExpenseClaimDocument: ExpenseClaimDocument = {
+    const newExpenseClaimDocument:
+      ExpenseClaimDocument = {
 
       id:
         Math.max(
@@ -282,6 +402,18 @@ export async function updateExpenseClaimDocuments(
       "Uno o más documentos seleccionados no existen"
     );
 
+  }
+
+  const documentFromAnotherEmployee =
+    selectedDocuments.find(
+      document =>
+        document.employeeId !== claim.employeeId
+    );
+
+  if (documentFromAnotherEmployee) {
+    throw new Error(
+      "Uno o más documentos no pertenecen al trabajador de la rendición"
+    );
   }
 
 

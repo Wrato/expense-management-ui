@@ -21,7 +21,6 @@ import type { ExpenseDocument } from "../models/ExpenseDocument";
 
 import { users } from "../mocks/users";
 import { issuerCompanies } from "../mocks/issuerCompanies";
-import { projects } from "../mocks/projects";
 import { expenseClaims } from "../mocks/expenseClaims";
 
 import {
@@ -42,7 +41,9 @@ export default function Documents() {
     useState("");
 
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+
+  const [rowsPerPage, setRowsPerPage] =
+    useState(5);
 
   useEffect(() => {
     async function loadDocuments() {
@@ -123,13 +124,6 @@ export default function Documents() {
               document.issuerCompanyId
           );
 
-        const project =
-          projects.find(
-            project =>
-              project.id ===
-              document.projectId
-          );
-
         const expenseClaim =
           expenseClaims.find(
             claim =>
@@ -143,7 +137,6 @@ export default function Documents() {
           document.issueDate,
           employee?.name,
           company?.name,
-          project?.name,
           expenseClaim?.title,
           getDocumentStatusLabel(
             document.status
@@ -163,14 +156,20 @@ export default function Documents() {
       });
     }, [documents, search]);
 
-  const paginatedDocuments = useMemo(() => {
-    const start = page * rowsPerPage;
+  const paginatedDocuments =
+    useMemo(() => {
+      const start =
+        page * rowsPerPage;
 
-    return filteredDocuments.slice(
-      start,
-      start + rowsPerPage
-    );
-  }, [filteredDocuments, page, rowsPerPage]);
+      return filteredDocuments.slice(
+        start,
+        start + rowsPerPage
+      );
+    }, [
+      filteredDocuments,
+      page,
+      rowsPerPage
+    ]);
 
   return (
     <>
@@ -232,9 +231,17 @@ export default function Documents() {
           );
           setPage(0);
         }}
-        rowsPerPageOptions={[5, 10, 25]}
+        rowsPerPageOptions={[
+          5,
+          10,
+          25
+        ]}
         labelRowsPerPage="Documentos por página"
-        labelDisplayedRows={({ from, to, count }) =>
+        labelDisplayedRows={({
+          from,
+          to,
+          count
+        }) =>
           `${from}-${to} de ${count}`
         }
       />

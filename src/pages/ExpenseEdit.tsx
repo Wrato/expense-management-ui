@@ -1,14 +1,23 @@
 import {
-    Box,
-    Typography,
-    Button,
-    Paper,
-    Checkbox,
-    FormControlLabel,
-    TextField,
-    Chip
+  Box,
+  Typography,
+  Button,
+  Paper,
+  Checkbox,
+  TextField,
+  Chip,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  Tooltip
 } from "@mui/material";
 
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import EditIcon from "@mui/icons-material/Edit";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import SaveIcon from "@mui/icons-material/Save";
 
@@ -16,7 +25,6 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { useAuth } from "../hooks/useAuth";
-import { UserRole } from "../models/UserRole";
 
 import type { ExpenseClaim } from "../models/ExpenseClaim";
 import { ExpenseClaimStatus } from "../models/ExpenseClaimStatus";
@@ -24,785 +32,947 @@ import { ExpenseClaimStatus } from "../models/ExpenseClaimStatus";
 import type { ExpenseDocument } from "../models/ExpenseDocument";
 import { DocumentStatus } from "../models/DocumentStatus";
 
-import type { Project } from "../models/Project";
+import { users } from "../mocks/users";
 
 import {
-    getExpenseClaims,
-    updateExpenseClaimDocuments,
-    updateExpenseClaim
+  getExpenseClaims,
+  updateExpenseClaimDocuments,
+  updateExpenseClaim
 } from "../services/expenseClaimService";
 
 import { getDocuments } from "../services/expenseDocumentService";
-import { getProjects } from "../services/projectService";
 
 import {
-    getExpenseClaimStatusColor,
-    getExpenseClaimStatusLabel
+  getExpenseClaimStatusColor,
+  getExpenseClaimStatusLabel
 } from "../utils/expenseClaimStatusUtils";
 
 import {
-    getDocumentStatusColor,
-    getDocumentStatusLabel
+  getDocumentStatusColor,
+  getDocumentStatusLabel
 } from "../utils/documentStatusUtils";
-
 
 export default function ExpenseEdit() {
 
-    const { id } = useParams();
+  const { id } = useParams();
 
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
-    const [title, setTitle] = useState("");
+  const { user } = useAuth();
 
-    const [claim, setClaim] =
-        useState<ExpenseClaim | null>(null);
+  const [title, setTitle] = useState("");
 
-    const [projects, setProjects] =
-        useState<Project[]>([]);
+  const [claim, setClaim] =
+    useState<ExpenseClaim | null>(null);
 
-    const [documents, setDocuments] =
-        useState<ExpenseDocument[]>([]);
+  const [documents, setDocuments] =
+    useState<ExpenseDocument[]>([]);
 
-    const [selectedDocuments, setSelectedDocuments] =
-        useState<number[]>([]);
+  const [selectedDocuments, setSelectedDocuments] =
+    useState<number[]>([]);
 
-    const { user } = useAuth();
 
+  useEffect(() => {
 
-    useEffect(() => {
+    async function loadData() {
 
-        async function loadData() {
+      const claimId =
+        Number(id);
 
-            const claimId = Number(id);
+      const claimsResponse =
+        await getExpenseClaims();
 
-            const claimsResponse =
-                await getExpenseClaims();
+      const documentsResponse =
+        await getDocuments();
 
-            const documentsResponse =
-                await getDocuments();
-
-            const projectsResponse =
-                await getProjects();
-
-
-            const selectedClaim =
-                claimsResponse.find(
-                    claim => claim.id === claimId
-                );
-
-
-            if (!selectedClaim) {
-                return;
-            }
-
-
-            setClaim(selectedClaim);
-
-            setTitle(selectedClaim.title);
-
-            setProjects(projectsResponse);
-
-
-            /*
-             * Documentos actualmente asociados
-             * a la rendición.
-             */
-            const assignedDocuments =
-                documentsResponse.filter(
-                    document =>
-                        document.expenseClaimId === claimId
-                );
-
-
-            const assignedDocumentIds =
-                assignedDocuments.map(
-                    document => document.id
-                );
-
-
-            setSelectedDocuments(
-                assignedDocumentIds
-            );
-
-
-            /*
-             * Documentos disponibles para agregar.
-             *
-             * Un documento nuevo debe:
-             *
-             * - estar libre
-             * - estar PENDING
-             * - pertenecer al mismo proyecto
-             * - pertenecer al trabajador actual
-             *
-             * Los documentos APPROVED o REJECTED
-             * no pueden agregarse.
-             */
-            const availableDocuments =
-                documentsResponse.filter(document => {
-
-                    const isAssigned =
-                        document.expenseClaimId === claimId;
-
-
-                    const isFree =
-                        document.expenseClaimId === null;
-
-
-                    /*
-                     * Si pertenece a otra rendición,
-                     * no está disponible.
-                     */
-                    if (!isFree && !isAssigned) {
-                        return false;
-                    }
-
-
-                    /*
-                     * Los documentos que ya están
-                     * en esta rendición siempre aparecen.
-                     */
-                    if (isAssigned) {
-                        return true;
-                    }
-
-
-                    /*
-                     * Los documentos nuevos deben
-                     * estar PENDING.
-                     */
-                    if (
-                        document.status !==
-                        DocumentStatus.Pending
-                    ) {
-                        return false;
-                    }
-
-
-                    /*
-                     * Debe pertenecer al mismo proyecto.
-                     */
-                    if (
-                        document.projectId !==
-                        selectedClaim.projectId
-                    ) {
-                        return false;
-                    }
-
-
-                    /*
-                     * Admin puede agregar cualquier
-                     * documento que cumpla las reglas.
-                     */
-                    if (
-                        user?.role === UserRole.Admin
-                    ) {
-                        return true;
-                    }
-
-
-                    /*
-                     * Los demás usuarios solamente
-                     * pueden agregar sus propios documentos.
-                     */
-                    return (
-                        document.employeeId ===
-                        user?.id
-                    );
-                });
-
-
-            /*
-             * Mostramos:
-             *
-             * 1. Documentos ya asociados.
-             * 2. Documentos PENDING disponibles.
-             *
-             * Eliminamos duplicados por seguridad.
-             */
-            const documentsForEdition = [
-                ...assignedDocuments,
-                ...availableDocuments.filter(
-                    available =>
-                        !assignedDocumentIds.includes(
-                            available.id
-                        )
-                )
-            ];
-
-
-            setDocuments(
-                documentsForEdition
-            );
-        }
-
-
-        loadData();
-
-    }, [id, user?.id, user?.role]);
-
-
-    /*
-     * Marca o desmarca un documento.
-     */
-    const handleToggleDocument = (
-        documentId: number
-    ) => {
-
-        const document =
-            documents.find(
-                document =>
-                    document.id === documentId
-            );
-
-
-        if (!document) {
-            return;
-        }
-
-
-        /*
-         * Los documentos APPROVED están bloqueados.
-         */
-        if (
-            document.status ===
-            DocumentStatus.Approved
-        ) {
-            return;
-        }
-
-
-        setSelectedDocuments(current => {
-
-            if (
-                current.includes(documentId)
-            ) {
-
-                return current.filter(
-                    id =>
-                        id !== documentId
-                );
-
-            }
-
-
-            return [
-                ...current,
-                documentId
-            ];
-
-        });
-
-    };
-
-
-    const selectedTotal =
-        documents
-            .filter(
-                document =>
-                    selectedDocuments.includes(
-                        document.id
-                    )
-            )
-            .reduce(
-                (sum, document) =>
-                    sum + (document.total ?? 0),
-                0
-            );
-
-
-    const handleSave = async () => {
-
-        if (!claim) {
-            return;
-        }
-
-
-        if (!user) {
-
-            alert(
-                "No se pudo identificar al usuario"
-            );
-
-            return;
-        }
-
-
-        if (
-            selectedDocuments.length === 0
-        ) {
-
-            alert(
-                "Debes seleccionar al menos un documento"
-            );
-
-            return;
-        }
-
-
-        /*
-         * Si la rendición fue devuelta,
-         * al modificarla vuelve a Draft.
-         *
-         * Lo mantenemos temporalmente porque
-         * Returned todavía existe en el modelo.
-         */
-        const updatedClaim: ExpenseClaim = {
-
-            ...claim,
-
-            title,
-
-            status:
-                claim.status ===
-                ExpenseClaimStatus.Returned
-                    ? ExpenseClaimStatus.Draft
-                    : claim.status
-
-        };
-
-
-        try {
-
-            await updateExpenseClaimDocuments(
-                claim.id,
-                selectedDocuments,
-                user.id
-            );
-
-
-            await updateExpenseClaim(
-                updatedClaim
-            );
-
-
-            alert(
-                "Rendición actualizada correctamente"
-            );
-
-
-            navigate(
-                `/expenses/${claim.id}`
-            );
-
-        } catch (error) {
-
-            console.error(error);
-
-            alert(
-                error instanceof Error
-                    ? error.message
-                    : "No fue posible actualizar la rendición"
-            );
-
-        }
-
-    };
-
-
-    if (!claim) {
-
-        return (
-            <Typography>
-                Rendición no encontrada
-            </Typography>
+      const selectedClaim =
+        claimsResponse.find(
+          claim =>
+            claim.id === claimId
         );
+
+      if (!selectedClaim) {
+        return;
+      }
+
+      setClaim(
+        selectedClaim
+      );
+
+      setTitle(
+        selectedClaim.title
+      );
+
+
+      /*
+       * Documentos actualmente asociados
+       * a la rendición.
+       */
+      const assignedDocuments =
+        documentsResponse.filter(
+          document =>
+            document.expenseClaimId ===
+            claimId
+        );
+
+      const assignedDocumentIds =
+        assignedDocuments.map(
+          document =>
+            document.id
+        );
+
+      setSelectedDocuments(
+        assignedDocumentIds
+      );
+
+
+      /*
+       * Documentos disponibles para agregar.
+       *
+       * Un documento nuevo debe:
+       *
+       * - estar libre
+       * - estar PENDING
+       * - pertenecer al mismo trabajador
+       *   de la rendición
+       */
+      const availableDocuments =
+        documentsResponse.filter(
+          document => {
+
+            const isAssigned =
+              document.expenseClaimId ===
+              claimId;
+
+            const isFree =
+              document.expenseClaimId ===
+              null;
+
+
+            /*
+             * Si pertenece a otra rendición,
+             * no está disponible.
+             */
+            if (
+              !isFree &&
+              !isAssigned
+            ) {
+              return false;
+            }
+
+
+            /*
+             * Los documentos que ya están
+             * en esta rendición siempre aparecen.
+             */
+            if (isAssigned) {
+              return true;
+            }
+
+
+            /*
+             * Los documentos nuevos deben
+             * estar PENDING.
+             */
+            if (
+              document.status !==
+              DocumentStatus.Pending
+            ) {
+              return false;
+            }
+
+
+            /*
+             * Todos los documentos nuevos
+             * deben pertenecer al trabajador
+             * de la rendición.
+             */
+            return (
+              document.employeeId ===
+              selectedClaim.employeeId
+            );
+
+          }
+        );
+
+
+      /*
+       * Documentos que mostraremos:
+       *
+       * 1. Los actualmente asociados.
+       * 2. Los PENDING disponibles del trabajador.
+       */
+      const documentsForEdition = [
+        ...assignedDocuments,
+        ...availableDocuments.filter(
+          available =>
+            !assignedDocumentIds.includes(
+              available.id
+            )
+        )
+      ];
+
+
+      setDocuments(
+        documentsForEdition
+      );
 
     }
 
 
-    /*
-     * Una rendición aprobada no puede modificarse.
-     */
+    loadData();
+
+  }, [
+    id
+  ]);
+
+
+  /*
+   * Documentos que pueden ser seleccionados.
+   *
+   * Los APPROVED están bloqueados.
+   */
+  const selectableDocuments =
+    documents.filter(
+      document =>
+        document.status ===
+        DocumentStatus.Pending
+    );
+
+
+  const selectableDocumentIds =
+    selectableDocuments.map(
+      document =>
+        document.id
+    );
+
+
+  const selectedSelectableIds =
+    selectableDocumentIds.filter(
+      documentId =>
+        selectedDocuments.includes(
+          documentId
+        )
+    );
+
+
+  const allSelectableSelected =
+    selectableDocumentIds.length > 0 &&
+    selectedSelectableIds.length ===
+      selectableDocumentIds.length;
+
+
+  const someSelectableSelected =
+    selectedSelectableIds.length > 0 &&
+    selectedSelectableIds.length <
+      selectableDocumentIds.length;
+
+
+  /*
+   * Seleccionar / deseleccionar todos
+   * los documentos modificables.
+   */
+  const handleToggleAll = () => {
+
     if (
-        claim.status ===
-        ExpenseClaimStatus.Approved
+      allSelectableSelected
     ) {
 
-        return (
-            <>
+      setSelectedDocuments(
+        current =>
+          current.filter(
+            documentId =>
+              !selectableDocumentIds.includes(
+                documentId
+              )
+          )
+      );
 
-                <Box
-                    sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                        mb: 3
-                    }}
-                >
-
-                    <Button
-                        startIcon={
-                            <ArrowBackIcon />
-                        }
-                        onClick={() =>
-                            navigate(
-                                `/expenses/${claim.id}`
-                            )
-                        }
-                    >
-                        Volver
-                    </Button>
-
-
-                    <Typography variant="h4">
-                        Rendición #{claim.id}
-                    </Typography>
-
-                </Box>
-
-
-                <Paper sx={{ p: 3 }}>
-
-                    <Typography
-                        variant="h6"
-                        sx={{ mb: 2 }}
-                    >
-                        Rendición aprobada
-                    </Typography>
-
-
-                    <Typography
-                        color="text.secondary"
-                    >
-                        Esta rendición ya fue aprobada
-                        y no puede ser modificada.
-                    </Typography>
-
-                </Paper>
-
-            </>
-        );
-
+      return;
     }
 
 
-    const project =
-        projects.find(
-            project =>
-                project.id === claim.projectId
+    setSelectedDocuments(
+      current =>
+        Array.from(
+          new Set([
+            ...current,
+            ...selectableDocumentIds
+          ])
+        )
+    );
+
+  };
+
+
+  /*
+   * Seleccionar / deseleccionar
+   * un documento.
+   */
+  const handleToggleDocument = (
+    documentId: number
+  ) => {
+
+    const document =
+      documents.find(
+        document =>
+          document.id === documentId
+      );
+
+    if (!document) {
+      return;
+    }
+
+
+    /*
+     * Los documentos APPROVED
+     * no pueden modificarse.
+     */
+    if (
+      document.status ===
+      DocumentStatus.Approved
+    ) {
+      return;
+    }
+
+
+    setSelectedDocuments(
+      current => {
+
+        if (
+          current.includes(
+            documentId
+          )
+        ) {
+
+          return current.filter(
+            id =>
+              id !== documentId
+          );
+
+        }
+
+
+        return [
+          ...current,
+          documentId
+        ];
+
+      }
+    );
+
+  };
+
+
+  const selectedTotal =
+    documents
+      .filter(
+        document =>
+          selectedDocuments.includes(
+            document.id
+          )
+      )
+      .reduce(
+        (sum, document) =>
+          sum +
+          (document.total ?? 0),
+        0
+      );
+
+
+  const handleSave =
+    async () => {
+
+      if (!claim) {
+        return;
+      }
+
+
+      if (!user) {
+
+        alert(
+          "No se pudo identificar al usuario"
+        );
+
+        return;
+      }
+
+
+      if (
+        selectedDocuments.length === 0
+      ) {
+
+        alert(
+          "Debes seleccionar al menos un documento"
+        );
+
+        return;
+      }
+
+
+      /*
+       * Si la rendición fue devuelta,
+       * al modificarla vuelve a Draft.
+       */
+      const updatedClaim: ExpenseClaim = {
+        ...claim,
+
+        title,
+
+        status:
+          claim.status ===
+          ExpenseClaimStatus.Returned
+            ? ExpenseClaimStatus.Draft
+            : claim.status
+      };
+
+
+      try {
+
+        await updateExpenseClaimDocuments(
+          claim.id,
+          selectedDocuments,
+          user.id
         );
 
 
+        await updateExpenseClaim(
+          updatedClaim
+        );
+
+
+        alert(
+          "Rendición actualizada correctamente"
+        );
+
+
+        navigate(
+          `/expenses/${claim.id}`
+        );
+
+      } catch (error) {
+
+        console.error(error);
+
+
+        alert(
+          error instanceof Error
+            ? error.message
+            : "No fue posible actualizar la rendición"
+        );
+
+      }
+
+    };
+
+
+  if (!claim) {
+
     return (
-        <>
+      <Typography>
+        Rendición no encontrada
+      </Typography>
+    );
 
-            <Box
-                sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                    mb: 3
-                }}
+  }
+
+
+  /*
+   * Una rendición aprobada no puede modificarse.
+   */
+  if (
+    claim.status ===
+    ExpenseClaimStatus.Approved
+  ) {
+
+    return (
+      <>
+
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            mb: 3
+          }}
+        >
+
+          <Button
+            startIcon={
+              <ArrowBackIcon />
+            }
+            onClick={() =>
+              navigate(
+                `/expenses/${claim.id}`
+              )
+            }
+          >
+            Volver
+          </Button>
+
+
+          <Typography variant="h4">
+            Rendición #{claim.id}
+          </Typography>
+
+        </Box>
+
+
+        <Paper sx={{ p: 3 }}>
+
+          <Typography
+            variant="h6"
+            sx={{ mb: 2 }}
+          >
+            Rendición aprobada
+          </Typography>
+
+
+          <Typography
+            color="text.secondary"
+          >
+            Esta rendición ya fue aprobada
+            y no puede ser modificada.
+          </Typography>
+
+        </Paper>
+
+      </>
+    );
+
+  }
+
+
+  return (
+    <>
+
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          mb: 3
+        }}
+      >
+
+        <Button
+          startIcon={
+            <ArrowBackIcon />
+          }
+          onClick={() =>
+            navigate(
+              `/expenses/${claim.id}`
+            )
+          }
+        >
+          Cancelar
+        </Button>
+
+
+        <Typography variant="h4">
+          Editar Rendición
+        </Typography>
+
+      </Box>
+
+
+      <Paper
+        sx={{
+          p: 3,
+          mb: 3
+        }}
+      >
+
+        <Typography
+          variant="h6"
+          sx={{ mb: 3 }}
+        >
+          Información de la rendición
+        </Typography>
+
+
+        <TextField
+          label="Título de la rendición"
+          value={title}
+          onChange={event =>
+            setTitle(
+              event.target.value
+            )
+          }
+          fullWidth
+          sx={{ mb: 3 }}
+        />
+
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "1fr",
+              md: "repeat(2, 1fr)"
+            },
+            gap: 3,
+            mb: 4
+          }}
+        >
+
+          <Box>
+
+            <Typography
+              variant="body2"
+              color="text.secondary"
             >
-
-                <Button
-                    startIcon={
-                        <ArrowBackIcon />
-                    }
-                    onClick={() =>
-                        navigate(
-                            `/expenses/${claim.id}`
-                        )
-                    }
-                >
-                    Cancelar
-                </Button>
+              Fecha de creación
+            </Typography>
 
 
-                <Typography variant="h4">
-                    Editar Rendición
-                </Typography>
+            <Typography>
+              {new Date(
+                claim.createdAt
+              ).toLocaleDateString(
+                "es-CL"
+              )}
+            </Typography>
 
-            </Box>
+          </Box>
 
 
-            <Paper
-                sx={{
-                    p: 3,
-                    mb: 3
-                }}
+          <Box>
+
+            <Typography
+              variant="body2"
+              color="text.secondary"
             >
-
-                <Typography
-                    variant="h6"
-                    sx={{ mb: 3 }}
-                >
-                    Información de la rendición
-                </Typography>
+              Estado
+            </Typography>
 
 
-                <TextField
-                    label="Título de la rendición"
-                    value={title}
-                    onChange={event =>
-                        setTitle(
-                            event.target.value
-                        )
-                    }
-                    fullWidth
-                    sx={{ mb: 3 }}
-                />
+            <Chip
+              label={
+                getExpenseClaimStatusLabel(
+                  claim.status
+                )
+              }
+              size="small"
+              color={
+                getExpenseClaimStatusColor(
+                  claim.status
+                )
+              }
+              sx={{ mt: 0.5 }}
+            />
+
+          </Box>
+
+        </Box>
 
 
-                <Box
-                    sx={{
-                        display: "grid",
-                        gridTemplateColumns: {
-                            xs: "1fr",
-                            md: "repeat(3, 1fr)"
-                        },
-                        gap: 3,
-                        mb: 4
-                    }}
-                >
-
-                    <Box>
-
-                        <Typography
-                            variant="body2"
-                            color="text.secondary"
-                        >
-                            Fecha de creación
-                        </Typography>
+        <Typography
+          variant="h6"
+          sx={{ mb: 2 }}
+        >
+          Documentos
+        </Typography>
 
 
-                        <Typography>
-                            {new Date(
-                                claim.createdAt
-                            ).toLocaleDateString(
-                                "es-CL"
-                            )}
-                        </Typography>
-
-                    </Box>
-
-
-                    <Box>
-
-                        <Typography
-                            variant="body2"
-                            color="text.secondary"
-                        >
-                            Proyecto
-                        </Typography>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ mb: 2 }}
+        >
+          Selecciona los documentos que forman
+          parte de esta rendición. Los documentos
+          aprobados están bloqueados.
+        </Typography>
 
 
-                        <Typography>
-                            {project?.name ??
-                                "Sin proyecto"}
-                        </Typography>
+        {documents.length === 0 && (
 
-                    </Box>
+          <Typography
+            color="text.secondary"
+            sx={{ mb: 2 }}
+          >
+            No hay documentos disponibles
+            para esta rendición.
+          </Typography>
 
-
-                    <Box>
-
-                        <Typography
-                            variant="body2"
-                            color="text.secondary"
-                        >
-                            Estado
-                        </Typography>
+        )}
 
 
-                        <Chip
-                            label={
-                                getExpenseClaimStatusLabel(
-                                    claim.status
-                                )
-                            }
-                            size="small"
-                            color={
-                                getExpenseClaimStatusColor(
-                                    claim.status
-                                )
-                            }
-                            sx={{ mt: 0.5 }}
-                        />
+        {documents.length > 0 && (
 
-                    </Box>
+          <TableContainer
+            component={Paper}
+            variant="outlined"
+          >
 
-                </Box>
+            <Table>
 
+              <TableHead>
 
-                <Typography
-                    variant="h6"
-                    sx={{ mb: 2 }}
-                >
-                    Documentos
-                </Typography>
+                <TableRow>
 
-
-                <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mb: 2 }}
-                >
-                    Puedes agregar documentos pendientes
-                    o quitar documentos de esta rendición.
-                    Los documentos aprobados están bloqueados.
-                </Typography>
+                  <TableCell
+                    padding="checkbox"
+                  >
+                    <Checkbox
+                      checked={
+                        allSelectableSelected
+                      }
+                      indeterminate={
+                        someSelectableSelected
+                      }
+                      onChange={
+                        handleToggleAll
+                      }
+                      disabled={
+                        selectableDocuments.length ===
+                        0
+                      }
+                    />
+                  </TableCell>
 
 
-                {documents.length === 0 && (
-
-                    <Typography
-                        color="text.secondary"
-                        sx={{ mb: 2 }}
-                    >
-                        No hay documentos disponibles
-                        para esta rendición.
-                    </Typography>
-
-                )}
+                  <TableCell>
+                    ID
+                  </TableCell>
 
 
-                {documents.map(document => {
+                  <TableCell>
+                    Trabajador
+                  </TableCell>
+
+
+                  <TableCell>
+                    Fecha
+                  </TableCell>
+
+
+                  <TableCell>
+                    N° documento
+                  </TableCell>
+
+
+                  <TableCell align="right">
+                    Total
+                  </TableCell>
+
+
+                  <TableCell>
+                    Estado
+                  </TableCell>
+
+
+                  <TableCell>
+                    Acciones
+                  </TableCell>
+
+                </TableRow>
+
+              </TableHead>
+
+
+              <TableBody>
+
+                {documents.map(
+                  document => {
 
                     const isApproved =
-                        document.status ===
-                        DocumentStatus.Approved;
+                      document.status ===
+                      DocumentStatus.Approved;
 
 
                     const isSelected =
-                        selectedDocuments.includes(
-                            document.id
-                        );
+                      selectedDocuments.includes(
+                        document.id
+                      );
 
 
                     return (
 
-                        <Box
-                            key={document.id}
-                            sx={{
-                                borderBottom: 1,
-                                borderColor: "divider",
-                                py: 1
-                            }}
+                      <TableRow
+                        key={document.id}
+                        hover
+                      >
+
+                        <TableCell
+                          padding="checkbox"
                         >
 
-                            <FormControlLabel
+                          <Checkbox
+                            checked={
+                              isSelected
+                            }
+                            disabled={
+                              isApproved
+                            }
+                            onChange={() =>
+                              handleToggleDocument(
+                                document.id
+                              )
+                            }
+                          />
 
-                                control={
+                        </TableCell>
 
-                                    <Checkbox
 
-                                        checked={
-                                            isSelected
-                                        }
+                        <TableCell>
+                          {document.id}
+                        </TableCell>
 
-                                        disabled={
-                                            isApproved
-                                        }
 
-                                        onChange={() =>
-                                            handleToggleDocument(
-                                                document.id
-                                            )
-                                        }
+                        <TableCell>
+                          {users.find(
+                            user => user.id === document.employeeId
+                          )?.name ?? "-"}
+                        </TableCell>
 
-                                    />
 
+                        <TableCell>
+                          {document.issueDate ??
+                            "-"}
+                        </TableCell>
+
+
+                        <TableCell>
+                          {document.documentNumber ??
+                            "-"}
+                        </TableCell>
+
+
+                        <TableCell align="right">
+                          $
+                          {(
+                            document.total ??
+                            0
+                          ).toLocaleString(
+                            "es-CL"
+                          )}
+                        </TableCell>
+
+
+                        <TableCell>
+
+                          <Chip
+                            label={
+                              getDocumentStatusLabel(
+                                document.status
+                              )
+                            }
+                            size="small"
+                            color={
+                              getDocumentStatusColor(
+                                document.status
+                              )
+                            }
+                          />
+
+                        </TableCell>
+
+
+                        <TableCell>
+
+                          <Tooltip title="Ver documento">
+
+                            <IconButton
+                              size="small"
+                              onClick={() =>
+                                navigate(
+                                  `/documents/${document.id}`,
+                                  {
+                                    state: {
+                                      returnTo:
+                                        `/expenses/${claim.id}/edit`
+                                    }
+                                  }
+                                )
+                              }
+                            >
+                              <VisibilityIcon
+                                fontSize="small"
+                              />
+                            </IconButton>
+
+                          </Tooltip>
+
+
+                          {!isApproved && (
+
+                            <Tooltip title="Editar documento">
+
+                              <IconButton
+                                size="small"
+                                onClick={() =>
+                                  navigate(
+                                    `/documents/${document.id}/edit`,
+                                    {
+                                      state: {
+                                        returnTo:
+                                          `/expenses/${claim.id}/edit`
+                                      }
+                                    }
+                                  )
                                 }
+                              >
+                                <EditIcon
+                                  fontSize="small"
+                                />
+                              </IconButton>
 
+                            </Tooltip>
 
-                                label={
+                          )}
 
-                                    <Box>
+                        </TableCell>
 
-                                        <Box
-                                            sx={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                gap: 1
-                                            }}
-                                        >
-
-                                            <Typography>
-                                                Documento:{" "}
-                                                {document.documentNumber ??
-                                                    "-"}
-                                            </Typography>
-
-
-                                            <Chip
-                                                label={
-                                                    getDocumentStatusLabel(
-                                                        document.status
-                                                    )
-                                                }
-                                                size="small"
-                                                color={
-                                                    getDocumentStatusColor(
-                                                        document.status
-                                                    )
-                                                }
-                                            />
-
-                                        </Box>
-
-
-                                        <Typography
-                                            variant="body2"
-                                            color="text.secondary"
-                                        >
-                                            Fecha:{" "}
-                                            {document.issueDate ??
-                                                "-"}
-                                            {" — "}
-                                            Total: $
-                                            {(document.total ??
-                                                0
-                                            ).toLocaleString(
-                                                "es-CL"
-                                            )}
-                                        </Typography>
-
-                                    </Box>
-
-                                }
-
-                            />
-
-                        </Box>
+                      </TableRow>
 
                     );
 
-                })}
+                  }
+                )}
 
-            </Paper>
+              </TableBody>
 
+            </Table>
 
-            <Box
-                sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center"
-                }}
-            >
+          </TableContainer>
 
-                <Typography variant="h6">
-                    Total:{" "}
-                    $
-                    {selectedTotal.toLocaleString(
-                        "es-CL"
-                    )}
-                </Typography>
+        )}
 
 
-                <Button
-                    variant="contained"
-                    startIcon={
-                        <SaveIcon />
-                    }
-                    onClick={handleSave}
-                >
-                    Guardar cambios
-                </Button>
+      </Paper>
 
-            </Box>
 
-        </>
-    );
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent:
+            "space-between",
+          alignItems: "center"
+        }}
+      >
+
+        <Typography variant="h6">
+          Total: $
+          {selectedTotal.toLocaleString(
+            "es-CL"
+          )}
+        </Typography>
+
+
+        <Button
+          variant="contained"
+          startIcon={
+            <SaveIcon />
+          }
+          onClick={handleSave}
+        >
+          Guardar cambios
+        </Button>
+
+      </Box>
+
+    </>
+  );
 }
